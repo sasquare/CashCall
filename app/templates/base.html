@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}DPRP Cash Call{% endblock %} — Dangote Petroleum Refinery</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <style>
+    /* Status badge colours */
+    .badge-green  { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800; }
+    .badge-amber  { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800; }
+    .badge-red    { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800; }
+    .badge-purple { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800; }
+    .badge-gray   { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700; }
+  </style>
+</head>
+<body class="h-full">
+
+{% if user is defined and user %}
+{# ── Authenticated layout ──────────────────────────────────────────── #}
+<div class="min-h-full">
+
+  {# Top navigation bar #}
+  <nav class="bg-green-800 shadow-sm">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="flex h-16 items-center justify-between">
+
+        {# Logo + app name #}
+        <div class="flex items-center gap-3">
+          <div class="flex-shrink-0">
+            <span class="text-white font-bold text-lg tracking-tight">DPRP</span>
+            <span class="text-green-300 font-light text-sm ml-1">Cash Call</span>
+          </div>
+        </div>
+
+        {# Desktop nav links — shown based on role #}
+        <div class="hidden md:flex md:items-center md:gap-1">
+
+          {% set role = user.role %}
+
+          {% if role == "originator" %}
+            <a href="/submissions/new"   class="nav-link">New Submission</a>
+            <a href="/submissions/mine"  class="nav-link">My Submissions</a>
+          {% endif %}
+
+          {% if role == "hod" %}
+            <a href="/hod/pending"       class="nav-link">Pending Approvals</a>
+            <a href="/hod/history"       class="nav-link">History</a>
+          {% endif %}
+
+          {% if role == "finance_reviewer" %}
+            <a href="/finance/pending"   class="nav-link">QC Queue</a>
+            <a href="/submissions/urgent/new" class="nav-link">New Urgent</a>
+          {% endif %}
+
+          {% if role == "cfo" %}
+            <a href="/cfo/pending"       class="nav-link">CFO Queue</a>
+            <a href="/cfo/deferred"      class="nav-link">Deferred</a>
+          {% endif %}
+
+          {% if role == "ceo" %}
+            <a href="/ceo/pending"       class="nav-link">CEO Queue</a>
+          {% endif %}
+
+          {% if role == "treasury" %}
+            <a href="/treasury/queue"    class="nav-link">Payment Queue</a>
+          {% endif %}
+
+          {% if role in ["cfo", "ceo", "finance_reviewer", "it_admin"] %}
+            <a href="/reports"           class="nav-link">Reports</a>
+          {% endif %}
+
+          {% if role == "it_admin" %}
+            <a href="/admin/users"       class="nav-link">Users</a>
+            <a href="/admin/rates"       class="nav-link">Rates</a>
+            <a href="/admin/budgets"     class="nav-link">Budgets</a>
+            <a href="/admin/audit"       class="nav-link">Audit Log</a>
+          {% endif %}
+
+        </div>
+
+        {# User menu #}
+        <div class="flex items-center gap-4">
+          <div class="text-right hidden sm:block">
+            <p class="text-white text-sm font-medium leading-none">{{ user.display_name }}</p>
+            <p class="text-green-300 text-xs mt-0.5 capitalize">{{ user.role | replace("_", " ") }}{% if user.department %} · {{ user.department | truncate(30, true, "…") }}{% endif %}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="/profile"
+               class="text-green-200 hover:text-white text-sm px-2 py-1 rounded hover:bg-green-700 transition-colors">
+              Profile
+            </a>
+            <a href="/logout"
+               class="text-green-200 hover:text-white text-sm px-2 py-1 rounded hover:bg-green-700 transition-colors">
+              Sign out
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# Mobile nav (simple stacked) #}
+    <div class="md:hidden border-t border-green-700 px-4 py-2 flex flex-wrap gap-2">
+      {% set role = user.role %}
+      {% if role == "originator" %}
+        <a href="/submissions/new"  class="mob-link">New Submission</a>
+        <a href="/submissions/mine" class="mob-link">My Submissions</a>
+      {% endif %}
+      {% if role == "hod" %}
+        <a href="/hod/pending"      class="mob-link">Pending</a>
+        <a href="/hod/history"      class="mob-link">History</a>
+      {% endif %}
+      {% if role == "finance_reviewer" %}
+        <a href="/finance/pending"  class="mob-link">QC Queue</a>
+      {% endif %}
+      {% if role == "cfo" %}
+        <a href="/cfo/pending"      class="mob-link">CFO Queue</a>
+        <a href="/cfo/deferred"     class="mob-link">Deferred</a>
+      {% endif %}
+      {% if role == "ceo" %}
+        <a href="/ceo/pending"      class="mob-link">CEO Queue</a>
+      {% endif %}
+      {% if role == "treasury" %}
+        <a href="/treasury/queue"   class="mob-link">Payment Queue</a>
+      {% endif %}
+      {% if role in ["cfo", "ceo", "finance_reviewer", "it_admin"] %}
+        <a href="/reports"          class="mob-link">Reports</a>
+      {% endif %}
+      {% if role == "it_admin" %}
+        <a href="/admin/users"      class="mob-link">Users</a>
+        <a href="/admin/rates"      class="mob-link">Rates</a>
+        <a href="/admin/budgets"    class="mob-link">Budgets</a>
+        <a href="/admin/audit"      class="mob-link">Audit</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  {# Page content #}
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+
+    {# Flash messages #}
+    {% if flash_success %}
+    <div class="mb-6 rounded-md bg-green-50 border border-green-200 p-4 flex gap-3">
+      <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+      <p class="text-sm text-green-800">{{ flash_success }}</p>
+    </div>
+    {% endif %}
+
+    {% if flash_error %}
+    <div class="mb-6 rounded-md bg-red-50 border border-red-200 p-4 flex gap-3">
+      <svg class="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-9a1 1 0 012 0v4a1 1 0 01-2 0V9zm1-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg>
+      <p class="text-sm text-red-800">{{ flash_error }}</p>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+{% else %}
+{# ── Unauthenticated layout (login page etc.) ──────────────────────── #}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+
+<style>
+  .nav-link  { @apply text-green-100 hover:text-white hover:bg-green-700 px-3 py-2 rounded-md text-sm font-medium transition-colors; }
+  .mob-link  { @apply text-green-200 hover:text-white text-xs px-2 py-1 rounded bg-green-700/50; }
+</style>
+
+</body>
+</html>

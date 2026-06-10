@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — DPRP Cash Call</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full">
+
+<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+
+  {# Header #}
+  <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
+    <div class="mx-auto w-16 h-16 bg-green-700 rounded-full flex items-center justify-center mb-4">
+      <svg class="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900">DPRP Cash Call</h1>
+    <p class="mt-1 text-sm text-gray-500">Dangote Petroleum Refinery &amp; Petrochemicals</p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-white py-8 px-6 shadow-sm rounded-xl border border-gray-100">
+
+      {# Error banner #}
+      {% if error %}
+      <div class="mb-5 rounded-md bg-red-50 border border-red-200 p-3">
+        <p class="text-sm text-red-700">
+          {% if error == "auth_failed" %}
+            Authentication failed. Please try again or contact IT Admin.
+          {% elif error == "azure_not_configured" %}
+            Microsoft login is not configured. Use the dev login below.
+          {% elif error == "dev_disabled" %}
+            Developer login is not available in this environment.
+          {% else %}
+            {{ error }}
+          {% endif %}
+        </p>
+      </div>
+      {% endif %}
+
+      {# Microsoft SSO button — shown when Azure is configured #}
+      {% if azure_configured %}
+      <a href="/login/microsoft"
+         class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors">
+        {# Microsoft logo SVG #}
+        <svg class="h-5 w-5" viewBox="0 0 21 21" fill="none">
+          <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
+          <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
+          <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
+          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        Sign in with Microsoft 365
+      </a>
+      {% else %}
+      <div class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-400 cursor-not-allowed">
+        <svg class="h-5 w-5" viewBox="0 0 21 21" fill="none">
+          <rect x="1"  y="1"  width="9" height="9" fill="#ccc"/>
+          <rect x="11" y="1"  width="9" height="9" fill="#ccc"/>
+          <rect x="1"  y="11" width="9" height="9" fill="#ccc"/>
+          <rect x="11" y="11" width="9" height="9" fill="#ccc"/>
+        </svg>
+        Microsoft 365 (not configured)
+      </div>
+      {% endif %}
+
+      {# Dev bypass — only in development mode #}
+      {% if dev_mode %}
+      <div class="mt-6">
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-200"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="bg-white px-3 text-amber-600 font-medium">Dev login</span>
+          </div>
+        </div>
+
+        <form action="/login/dev" method="post" class="mt-5 space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="email" name="email" type="email" required autocomplete="email"
+                   value="{{ prefill_email or '' }}"
+                   placeholder="e.g. cfo@dangote.com"
+                   class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm
+                          placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"/>
+          </div>
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input id="password" name="password" type="password" required autocomplete="current-password"
+                   class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm
+                          focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"/>
+          </div>
+          <button type="submit"
+                  class="w-full rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white
+                         shadow-sm hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600
+                         focus:ring-offset-2 transition-colors">
+            Sign in
+          </button>
+        </form>
+
+        <div class="mt-4 rounded-md bg-amber-50 border border-amber-200 p-3">
+          <p class="text-xs text-amber-700 font-medium mb-1">Development credentials</p>
+          <div class="text-xs text-amber-600 space-y-0.5 font-mono">
+            <div>cfo@dangote.com / CFO@12345</div>
+            <div>ceo@dangote.com / CEO@12345</div>
+            <div>hod.fin@dangote.com / HOD@12345</div>
+            <div>originator.fin@dangote.com / Orig@1234</div>
+            <div>finance.reviewer@dangote.com / Finance@123</div>
+            <div>treasury@dangote.com / Treasury@123</div>
+            <div>it.admin@dangote.com / ITAdmin@123</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <p class="mt-6 text-center text-xs text-gray-400">
+      For access issues contact
+      <a href="mailto:it.admin@dangote.com" class="text-green-700 hover:underline">IT Admin</a>
+    </p>
+  </div>
+</div>
+
+</body>
+</html>
