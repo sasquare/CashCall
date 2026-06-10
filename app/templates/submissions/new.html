@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}New Cash Call Submission{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+
+  {# Page header #}
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">New Cash Call Submission</h1>
+    <p class="mt-1 text-sm text-gray-500">Fill in the submission details and add line items below.</p>
+  </div>
+
+  {# Validation errors #}
+  {% if errors %}
+  <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
+    <div class="flex items-start gap-3">
+      <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <div>
+        <p class="text-sm font-semibold text-red-700 mb-1">Please correct the following errors:</p>
+        <ul class="list-disc list-inside space-y-0.5">
+          {% for err in errors %}
+          <li class="text-sm text-red-600">{{ err }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="POST" action="/submissions/new" id="submission-form">
+
+    {# ── Section 1: Submission Details ───────────────────────────────── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <h2 class="text-base font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
+        Submission Details
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+        {# Department #}
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Department <span class="text-red-500">*</span>
+          </label>
+          <select name="department" required
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white">
+            <option value="">Select department…</option>
+            {% for group, depts in department_groups.items() %}
+            <optgroup label="{{ group }}">
+              {% for dept in depts %}
+              <option value="{{ dept }}" {% if form_data.get('department') == dept %}selected{% endif %}>
+                {{ dept }}
+              </option>
+              {% endfor %}
+            </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# Month #}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Month <span class="text-red-500">*</span>
+          </label>
+          <select name="month" required
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white">
+            <option value="">Select month…</option>
+            {% set month_names = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',
+                                   7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'} %}
+            {% for num, name in month_names.items() %}
+            <option value="{{ num }}" {% if form_data.get('month')|string == num|string %}selected{% endif %}>
+              {{ name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# Year #}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Year <span class="text-red-500">*</span>
+          </label>
+          <select name="year" required
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white">
+            {% set current_year = 2026 %}
+            {% for y in range(current_year - 1, current_year + 2) %}
+            <option value="{{ y }}" {% if form_data.get('year')|string == y|string or (not form_data.get('year') and y == current_year) %}selected{% endif %}>
+              {{ y }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# Cost Type #}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Cost Type <span class="text-red-500">*</span>
+          </label>
+          <div class="flex gap-6 mt-1">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="cost_type" value="opex"
+                     {% if form_data.get('cost_type','opex') == 'opex' %}checked{% endif %}
+                     class="h-4 w-4 text-green-700 focus:ring-green-600 border-gray-300">
+              <span class="text-sm text-gray-700">OPEX</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="cost_type" value="capex"
+                     {% if form_data.get('cost_type') == 'capex' %}checked{% endif %}
+                     class="h-4 w-4 text-green-700 focus:ring-green-600 border-gray-300">
+              <span class="text-sm text-gray-700">CAPEX</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      {# Supporting Justification #}
+      <div class="mt-5">
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Supporting Justification <span class="text-red-500">*</span>
+        </label>
+        <textarea name="supporting_justification" rows="3" required
+                  placeholder="Explain the business need for this cash call…"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 resize-none">{{ form_data.get('supporting_justification', '') }}</textarea>
+      </div>
+    </div>
+
+    {# ── Section 2: Line Items ────────────────────────────────────────── #}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
+        <div>
+          <h2 class="text-base font-semibold text-gray-800">Line Items</h2>
+          <p class="text-xs text-gray-500 mt-0.5">
+            Add up to 10 items. All amounts will be converted to USD automatically.
+          </p>
+        </div>
+        <span id="li-counter" class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">
+          {{ line_item_rows | length }} / 10
+        </span>
+      </div>
+
+      {# Container for line item rows #}
+      <div id="line-items-container" class="space-y-4">
+        {% for row in line_item_rows %}
+        {% set idx = loop.index0 %}
+        {% include "submissions/_line_item_row.html" %}
+        {% endfor %}
+      </div>
+
+      {# Add line item button #}
+      <button type="button"
+              id="add-li-btn"
+              hx-get="/submissions/line-items/add"
+              hx-include="#li-next-idx"
+              hx-target="#line-items-container"
+              hx-swap="beforeend"
+              hx-on::after-request="incrementLineCount()"
+              class="mt-4 flex items-center gap-2 rounded-lg border border-dashed border-green-600 px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-50 transition-colors w-full justify-center">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add Line Item
+      </button>
+
+      {# Hidden input to track next index for HTMX #}
+      <input type="hidden" id="li-next-idx" name="next_line_idx" value="{{ line_item_rows | length }}">
+    </div>
+
+    {# ── Actions ─────────────────────────────────────────────────────── #}
+    <div class="flex items-center justify-between">
+      <a href="/submissions/mine"
+         class="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+        Cancel
+      </a>
+      <button type="submit"
+              class="rounded-lg bg-green-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition-colors shadow-sm">
+        Submit for HOD Approval
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // Track number of line item rows for the counter + next-idx input
+  function getRowCount() {
+    return document.querySelectorAll('#line-items-container .li-row').length;
+  }
+
+  function updateCounter() {
+    const count = getRowCount();
+    document.getElementById('li-counter').textContent = count + ' / 10';
+    document.getElementById('li-next-idx').value = count;
+    const btn = document.getElementById('add-li-btn');
+    if (count >= 10) {
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+  }
+
+  function incrementLineCount() {
+    updateCounter();
+  }
+
+  function recountRows() {
+    updateCounter();
+  }
+
+  function toggleArrearType(idx, checked) {
+    const wrap = document.getElementById('arrear_type_wrap_' + idx);
+    if (wrap) {
+      wrap.classList.toggle('hidden', !checked);
+      const sel = wrap.querySelector('select');
+      if (sel) sel.required = checked;
+    }
+  }
+
+  // Set initial counter
+  updateCounter();
+</script>
+{% endblock %}

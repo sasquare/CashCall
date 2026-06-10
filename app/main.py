@@ -9,6 +9,7 @@ from app.database import Base, engine
 import app.models  # noqa: F401 — registers all ORM models
 
 from app.routers import auth as auth_router
+from app.routers import submissions as submissions_router
 
 app = FastAPI(
     title=settings.APP_TITLE,
@@ -29,6 +30,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Routers
 app.include_router(auth_router.router)
+app.include_router(submissions_router.router)
 
 
 # ---------------------------------------------------------------------------
