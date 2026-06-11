@@ -62,7 +62,7 @@
   {% endif %}
 
   {% if user.role == "hod" %}
-  <a href="/hod/pending"
+  <a href="/hod/queue"
      class="group rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm hover:shadow-md hover:border-amber-400 transition-all">
     <div class="flex items-center gap-4">
       <div class="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -80,7 +80,7 @@
   {% endif %}
 
   {% if user.role == "finance_reviewer" %}
-  <a href="/finance/pending"
+  <a href="/finance/queue"
      class="group rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm hover:shadow-md transition-all">
     <div class="flex items-center gap-4">
       <div class="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -98,7 +98,7 @@
   {% endif %}
 
   {% if user.role == "cfo" %}
-  <a href="/cfo/pending"
+  <a href="/cfo/queue"
      class="group rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm hover:shadow-md transition-all">
     <div class="flex items-center gap-4">
       <div class="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -116,7 +116,7 @@
   {% endif %}
 
   {% if user.role == "ceo" %}
-  <a href="/ceo/pending"
+  <a href="/ceo/queue"
      class="group rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm hover:shadow-md transition-all">
     <div class="flex items-center gap-4">
       <div class="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
