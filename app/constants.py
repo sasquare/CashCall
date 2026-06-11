@@ -358,6 +358,16 @@ PAYMENT_FREQUENCIES: list[str] = [
 
 COST_TYPES: list[str] = ["opex", "capex"]
 
+URGENCY_CATEGORIES: list[str] = [
+    "Plant Shutdown Risk",
+    "Safety & Regulatory Compliance",
+    "Contractual Obligation / Penalty Avoidance",
+    "Supplier Credit Risk",
+    "Critical Spare Parts",
+    "Utility / Feedstock Continuity",
+    "Other",
+]
+
 # Status → badge colour mapping (used in templates)
 STATUS_BADGE_COLOURS: dict[str, str] = {
     "pending_hod": "amber",

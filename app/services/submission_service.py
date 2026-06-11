@@ -20,7 +20,7 @@ from app.models.exchange_rate import ExchangeRate
 from app.models.line_item import LineItem
 from app.models.submission import Submission
 from app.models.user import User
-from app.schemas.submission import LineItemIn, SubmissionIn
+from app.schemas.submission import LineItemIn, SubmissionIn, UrgentSubmissionIn
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +160,7 @@ def create_submission(
     submission_id = generate_submission_id(db, data.year)
     month_name = make_month_name(data.month, data.year)
 
+    is_urgent = isinstance(data, UrgentSubmissionIn)
     submission = Submission(
         submission_id=submission_id,
         department=data.department,
@@ -169,9 +170,13 @@ def create_submission(
         cost_type=data.cost_type,
         supporting_justification=data.supporting_justification,
         status="pending_hod",
-        request_type="standard",
+        request_type="urgent" if is_urgent else "standard",
         budget_over_limit_flag=over_limit,
         created_by=creator.id,
+        urgency_category=data.urgency_category if is_urgent else None,
+        urgency_reason=data.urgency_reason if is_urgent else None,
+        requested_payment_date=data.requested_payment_date if is_urgent else None,
+        finance_authoriser=data.finance_authoriser if is_urgent else None,
     )
     db.add(submission)
     db.flush()  # get submission.id
@@ -207,10 +212,11 @@ def create_submission(
         outcome="pending_hod",
         performed_by=creator.id,
         amount_usd=float(total_usd),
-        notes=f"Submitted by {creator.display_name}. "
+        notes=f"{'URGENT — ' if is_urgent else ''}Submitted by {creator.display_name}. "
               f"{len(data.line_items)} line item(s). "
               f"Total: USD {total_usd:,.2f}."
-              + (f" Budget over-limit by USD {overage:,.2f}." if over_limit else ""),
+              + (f" Budget over-limit by USD {overage:,.2f}." if over_limit else "")
+              + (f" Urgency: {data.urgency_category}. Requested payment: {data.requested_payment_date}." if is_urgent else ""),
     ))
 
     db.commit()

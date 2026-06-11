@@ -70,7 +70,10 @@
         } %}
         {% set colour = badge_colours.get(sub.status, 'gray') %}
         <tr class="hover:bg-gray-50 transition-colors">
-          <td class="px-4 py-3 font-mono font-medium text-gray-900">{{ sub.submission_id }}</td>
+          <td class="px-4 py-3 font-mono font-medium text-gray-900">
+            {{ sub.submission_id }}
+            {% if sub.request_type == 'urgent' %}<span class="badge badge-red text-xs ml-1">URGENT</span>{% endif %}
+          </td>
           <td class="px-4 py-3 text-gray-700 max-w-[200px] truncate" title="{{ sub.department }}">{{ sub.department }}</td>
           <td class="px-4 py-3 text-gray-700">{{ sub.month_name }}</td>
           <td class="px-4 py-3">

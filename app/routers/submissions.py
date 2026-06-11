@@ -25,12 +25,13 @@ from app.constants import (
     DEPARTMENT_GROUPS,
     PAYMENT_FREQUENCIES,
     SUBMISSION_STATUSES,
+    URGENCY_CATEGORIES,
 )
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
 from app.models.submission import Submission
 from app.models.user import User
-from app.schemas.submission import LineItemIn, SubmissionIn
+from app.schemas.submission import LineItemIn, SubmissionIn, UrgentSubmissionIn
 from app.services.submission_service import create_submission
 
 logger = logging.getLogger(__name__)
@@ -206,6 +207,116 @@ async def create_submission_route(
                 currencies=CURRENCIES,
                 frequencies=PAYMENT_FREQUENCIES,
                 arrear_types=ARREAR_TYPES,
+                errors=errors,
+                form_data=form,
+                line_item_rows=raw_items,
+            ),
+            status_code=422,
+        )
+
+    return RedirectResponse(
+        url=f"/submissions/{submission.submission_id}/confirmation",
+        status_code=303,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Urgent submission form
+# ---------------------------------------------------------------------------
+
+@router.get("/urgent/new", response_class=HTMLResponse)
+async def new_urgent_form(
+    request: Request,
+    current_user: User = Depends(require_role("originator")),
+):
+    tmpl = _templates(request)
+    return tmpl.TemplateResponse(
+        "submissions/urgent_new.html",
+        _get_template_ctx(
+            request,
+            user=current_user,
+            department_groups=DEPARTMENT_GROUPS,
+            categories=CASH_CALL_CATEGORIES,
+            currencies=CURRENCIES,
+            frequencies=PAYMENT_FREQUENCIES,
+            arrear_types=ARREAR_TYPES,
+            urgency_categories=URGENCY_CATEGORIES,
+            errors=None,
+            form_data={},
+            line_item_rows=[{}],
+        ),
+    )
+
+
+@router.post("/urgent/new", response_class=HTMLResponse)
+async def create_urgent_submission(
+    request: Request,
+    current_user: User = Depends(require_role("originator")),
+    db: Session = Depends(get_db),
+):
+    form = dict(await request.form())
+    raw_items = _parse_line_items_from_form(form)
+
+    payload = {
+        "department": form.get("department", ""),
+        "month": form.get("month", ""),
+        "year": form.get("year", ""),
+        "cost_type": form.get("cost_type", ""),
+        "supporting_justification": form.get("supporting_justification", ""),
+        "urgency_category": form.get("urgency_category", ""),
+        "urgency_reason": form.get("urgency_reason", ""),
+        "requested_payment_date": form.get("requested_payment_date", ""),
+        "finance_authoriser": form.get("finance_authoriser", ""),
+        "line_items": raw_items,
+    }
+
+    errors: list[str] = []
+    submission_in: UrgentSubmissionIn | None = None
+    try:
+        submission_in = UrgentSubmissionIn(**payload)
+    except ValidationError as exc:
+        for e in exc.errors():
+            loc = " → ".join(str(x) for x in e["loc"])
+            errors.append(f"{loc}: {e['msg']}")
+    except Exception as exc:
+        errors.append(str(exc))
+
+    tmpl = _templates(request)
+
+    if errors or submission_in is None:
+        return tmpl.TemplateResponse(
+            "submissions/urgent_new.html",
+            _get_template_ctx(
+                request,
+                user=current_user,
+                department_groups=DEPARTMENT_GROUPS,
+                categories=CASH_CALL_CATEGORIES,
+                currencies=CURRENCIES,
+                frequencies=PAYMENT_FREQUENCIES,
+                arrear_types=ARREAR_TYPES,
+                urgency_categories=URGENCY_CATEGORIES,
+                errors=errors,
+                form_data=form,
+                line_item_rows=raw_items,
+            ),
+            status_code=422,
+        )
+
+    try:
+        submission = create_submission(submission_in, current_user, db)
+    except ValueError as exc:
+        errors.append(str(exc))
+        return tmpl.TemplateResponse(
+            "submissions/urgent_new.html",
+            _get_template_ctx(
+                request,
+                user=current_user,
+                department_groups=DEPARTMENT_GROUPS,
+                categories=CASH_CALL_CATEGORIES,
+                currencies=CURRENCIES,
+                frequencies=PAYMENT_FREQUENCIES,
+                arrear_types=ARREAR_TYPES,
+                urgency_categories=URGENCY_CATEGORIES,
                 errors=errors,
                 form_data=form,
                 line_item_rows=raw_items,

@@ -6,6 +6,9 @@ from decimal import Decimal
 from pydantic import BaseModel, field_validator, model_validator
 
 
+
+
+
 class LineItemIn(BaseModel):
     vendor_name: str
     invoice_no: str
@@ -92,3 +95,34 @@ class SubmissionIn(BaseModel):
         if len(v) > 10:
             raise ValueError("Maximum 10 line items per submission.")
         return v
+
+
+class UrgentSubmissionIn(SubmissionIn):
+    """Extends SubmissionIn with mandatory urgency fields."""
+
+    urgency_category: str
+    urgency_reason: str
+    requested_payment_date: date
+    finance_authoriser: str
+
+    @field_validator("urgency_category")
+    @classmethod
+    def valid_urgency_category(cls, v: str) -> str:
+        from app.constants import URGENCY_CATEGORIES
+        if v not in URGENCY_CATEGORIES:
+            raise ValueError(f"Invalid urgency category: {v}")
+        return v
+
+    @field_validator("urgency_reason")
+    @classmethod
+    def reason_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Urgency reason is required.")
+        return v.strip()
+
+    @field_validator("finance_authoriser")
+    @classmethod
+    def authoriser_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Finance authoriser name is required.")
+        return v.strip()

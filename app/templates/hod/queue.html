@@ -44,15 +44,19 @@
       </thead>
       <tbody class="divide-y divide-gray-50">
         {% for sub in pending %}
-        <tr class="hover:bg-amber-50 transition-colors">
-          <td class="px-4 py-3 font-mono font-semibold text-gray-900">{{ sub.submission_id }}</td>
+        <tr class="{% if sub.request_type == 'urgent' %}bg-red-50 hover:bg-red-100{% else %}hover:bg-amber-50{% endif %} transition-colors">
+          <td class="px-4 py-3 font-mono font-semibold text-gray-900">
+            {{ sub.submission_id }}
+            {% if sub.request_type == 'urgent' %}<span class="badge badge-red text-xs ml-1">URGENT</span>{% endif %}
+          </td>
           <td class="px-4 py-3 text-gray-700">{{ sub.month_name }}</td>
           <td class="px-4 py-3"><span class="text-xs font-medium uppercase text-gray-500">{{ sub.cost_type }}</span></td>
           <td class="px-4 py-3 text-right text-gray-600">{{ sub.line_items | length }}</td>
           <td class="px-4 py-3 text-gray-500 text-xs">{{ sub.created_at.strftime('%d %b %Y') }}</td>
           <td class="px-4 py-3">
-            {% if sub.budget_over_limit_flag %}
-            <span class="badge badge-red text-xs">Over Budget</span>
+            {% if sub.budget_over_limit_flag %}<span class="badge badge-red text-xs">Over Budget</span>{% endif %}
+            {% if sub.request_type == 'urgent' and sub.requested_payment_date %}
+            <div class="text-xs text-red-600 mt-0.5 font-medium">Pay by {{ sub.requested_payment_date.strftime('%d %b') }}</div>
             {% endif %}
           </td>
           <td class="px-4 py-3 text-right">
