@@ -1,0 +1,43 @@
+# Version control
+.git
+.gitignore
+
+# Python byte-code and caches
+**/__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Databases (never bake into image)
+*.db
+*.db-shm
+*.db-wal
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artefacts
+dist/
+build/
+*.egg-info/
+
+# Dev / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Test results
+htmlcov/
+.coverage
+coverage.xml
+
+# Docs
+*.md

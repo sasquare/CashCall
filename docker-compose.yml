@@ -1,0 +1,29 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: cashcall:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override to point at the /data volume for SQLite
+      DATABASE_URL: sqlite:////data/cashcall.db
+    volumes:
+      - cashcall_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  cashcall_data:
+    driver: local

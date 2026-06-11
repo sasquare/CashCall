@@ -1,7 +1,11 @@
+import time
+from collections import defaultdict
+
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
@@ -17,12 +21,71 @@ from app.routers import ceo as ceo_router
 from app.routers import treasury as treasury_router
 from app.routers import admin as admin_router
 
+# ---------------------------------------------------------------------------
+# Security headers middleware
+# ---------------------------------------------------------------------------
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+        if settings.is_production:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+        return response
+
+
+# ---------------------------------------------------------------------------
+# Simple in-process rate limiter (per IP, per minute)
+# ---------------------------------------------------------------------------
+
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+_RATE_LIMIT = 120       # requests per window
+_RATE_WINDOW = 60.0     # seconds
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path == "/health":
+            return await call_next(request)
+
+        ip = request.client.host if request.client else "unknown"
+        now = time.monotonic()
+        window_start = now - _RATE_WINDOW
+
+        hits = _rate_limit_store[ip]
+        # Purge old entries
+        hits[:] = [t for t in hits if t > window_start]
+
+        if len(hits) >= _RATE_LIMIT:
+            return JSONResponse(
+                {"detail": "Too many requests. Please slow down."},
+                status_code=429,
+                headers={"Retry-After": "60"},
+            )
+
+        hits.append(now)
+        return await call_next(request)
+
+
+# ---------------------------------------------------------------------------
+# App factory
+# ---------------------------------------------------------------------------
+
 app = FastAPI(
     title=settings.APP_TITLE,
     docs_url="/docs" if settings.is_development else None,
     redoc_url=None,
+    openapi_url="/openapi.json" if settings.is_development else None,
 )
 
+# Middleware — outermost first
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
