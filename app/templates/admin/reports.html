@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Reports — {{ month_names[sel_month] }} {{ sel_year }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Reports</h1>
+    <p class="mt-1 text-sm text-gray-500">Spending analytics by period.</p>
+  </div>
+
+  {# Period picker #}
+  <form method="GET" action="/admin/reports" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6 flex flex-wrap items-end gap-4">
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Month</label>
+      <select name="month" class="rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-600">
+        {% for num, name in month_names.items() %}
+        <option value="{{ num }}" {% if num == sel_month %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Year</label>
+      <select name="year" class="rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-600">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == sel_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="rounded-lg bg-gray-700 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">View</button>
+  </form>
+
+  {# Summary stats #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <p class="text-xs text-gray-500 uppercase">Total Submissions</p>
+      <p class="text-3xl font-bold text-gray-900 mt-1">{{ total_subs }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <p class="text-xs text-gray-500 uppercase">Paid</p>
+      <p class="text-3xl font-bold text-green-600 mt-1">{{ status_counts.get('paid', 0) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <p class="text-xs text-gray-500 uppercase">In Pipeline</p>
+      {% set pipeline = status_counts.get('pending_hod',0) + status_counts.get('pending_finance_qc',0) + status_counts.get('pending_cfo',0) + status_counts.get('pending_ceo',0) + status_counts.get('pending_treasury_payment',0) %}
+      <p class="text-3xl font-bold text-amber-600 mt-1">{{ pipeline }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <p class="text-xs text-gray-500 uppercase">Declined / Returned</p>
+      {% set rejected = status_counts.get('declined_by_hod',0) + status_counts.get('declined_by_cfo',0) + status_counts.get('declined_by_ceo',0) + status_counts.get('returned_for_revision',0) %}
+      <p class="text-3xl font-bold text-red-500 mt-1">{{ rejected }}</p>
+    </div>
+  </div>
+
+  {# Status breakdown #}
+  {% if status_counts %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
+    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Status Breakdown</h2>
+    <div class="flex flex-wrap gap-3">
+      {% for status, count in status_counts.items() | sort(attribute='1', reverse=True) %}
+      <div class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+        <span class="text-sm font-bold text-gray-900">{{ count }}</span>
+        <span class="text-xs text-gray-500">{{ status | replace('_',' ') | title }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Department breakdown #}
+  {% if dept_totals %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">By Department</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 border-b border-gray-100">
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Department</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Submissions</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Total USD</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Paid USD</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Budget USD</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Pending</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Urgent</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Budget Use</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for dept, row in dept_totals.items() %}
+          {% set budget = budget_map.get(dept) %}
+          {% set alloc = (budget.monthly_allocation_usd | float) if budget else 0 %}
+          {% set util = ((row.total_usd / alloc * 100) | round(1)) if alloc > 0 else 0 %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2.5 text-xs text-gray-700 max-w-[200px] truncate" title="{{ dept }}">{{ dept }}</td>
+            <td class="px-4 py-2.5 text-right text-gray-700">{{ row.count }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-gray-900">{{ '{:,.0f}'.format(row.total_usd) }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-green-700">{{ '{:,.0f}'.format(row.paid) }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-gray-500">{{ '{:,.0f}'.format(alloc) if alloc else '—' }}</td>
+            <td class="px-4 py-2.5 text-right {% if row.pending > 0 %}text-amber-600 font-medium{% else %}text-gray-400{% endif %}">{{ row.pending }}</td>
+            <td class="px-4 py-2.5 text-right {% if row.urgent > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">{{ row.urgent }}</td>
+            <td class="px-4 py-2.5">
+              {% if alloc > 0 %}
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-gray-200 rounded-full h-1.5 max-w-[60px]">
+                  <div class="h-1.5 rounded-full {% if util > 100 %}bg-red-500{% elif util > 80 %}bg-amber-500{% else %}bg-green-500{% endif %}"
+                       style="width: {{ [util, 100] | min }}%"></div>
+                </div>
+                <span class="text-xs {% if util > 100 %}text-red-600 font-bold{% else %}text-gray-500{% endif %}">{{ util }}%</span>
+              </div>
+              {% else %}
+              <span class="text-xs text-gray-400">No budget</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
+    <p class="text-gray-400 text-sm">No submissions found for {{ month_names[sel_month] }} {{ sel_year }}.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

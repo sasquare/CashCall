@@ -15,6 +15,7 @@ from app.routers import finance_qc as finance_qc_router
 from app.routers import cfo as cfo_router
 from app.routers import ceo as ceo_router
 from app.routers import treasury as treasury_router
+from app.routers import admin as admin_router
 
 app = FastAPI(
     title=settings.APP_TITLE,
@@ -41,6 +42,7 @@ app.include_router(finance_qc_router.router)
 app.include_router(cfo_router.router)
 app.include_router(ceo_router.router)
 app.include_router(treasury_router.router)
+app.include_router(admin_router.router)
 
 
 # ---------------------------------------------------------------------------
