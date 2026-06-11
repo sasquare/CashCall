@@ -6,9 +6,16 @@
 
   {# Page header #}
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">New Cash Call Submission</h1>
+    <h1 class="text-2xl font-bold text-gray-900">{% if editing_submission %}Edit Submission {{ editing_submission.submission_id }}{% else %}New Cash Call Submission{% endif %}</h1>
     <p class="mt-1 text-sm text-gray-500">Fill in the submission details and add line items below.</p>
   </div>
+
+  {% if hod_comment %}
+  <div class="mb-6 rounded-lg bg-amber-50 border border-amber-200 p-4">
+    <p class="text-sm font-bold text-amber-800 mb-1">HOD Feedback — please address before resubmitting</p>
+    <p class="text-sm text-amber-700">{{ hod_comment }}</p>
+  </div>
+  {% endif %}
 
   {# Validation errors #}
   {% if errors %}
@@ -30,7 +37,7 @@
   </div>
   {% endif %}
 
-  <form method="POST" action="/submissions/new" id="submission-form">
+  <form method="POST" action="{% if editing_submission %}/submissions/{{ editing_submission.submission_id }}/edit{% else %}/submissions/new{% endif %}" id="submission-form">
 
     {# ── Section 1: Submission Details ───────────────────────────────── #}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">

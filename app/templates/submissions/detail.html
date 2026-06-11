@@ -30,11 +30,29 @@
         Submitted {{ submission.created_at.strftime('%d %b %Y at %H:%M') if submission.created_at else '—' }}
       </p>
     </div>
-    <a href="/submissions/mine"
-       class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-      ← My Submissions
-    </a>
+    <div class="flex gap-2">
+      {% if submission.status == 'hod_returned' and user.role == 'originator' and submission.created_by == user.id %}
+      <a href="/submissions/{{ submission.submission_id }}/edit"
+         class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 transition-colors">
+        Edit &amp; Resubmit
+      </a>
+      {% endif %}
+      <a href="/submissions/mine"
+         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+        ← My Submissions
+      </a>
+    </div>
   </div>
+
+  {# HOD return/decline feedback #}
+  {% if submission.hod_comment and submission.status in ['hod_returned', 'hod_declined'] %}
+  <div class="mb-6 rounded-lg {% if submission.status == 'hod_returned' %}bg-amber-50 border border-amber-200{% else %}bg-red-50 border border-red-200{% endif %} p-4">
+    <p class="text-sm font-bold {% if submission.status == 'hod_returned' %}text-amber-800{% else %}text-red-800{% endif %} mb-1">
+      HOD {% if submission.status == 'hod_returned' %}Returned{% else %}Declined{% endif %} — Feedback
+    </p>
+    <p class="text-sm {% if submission.status == 'hod_returned' %}text-amber-700{% else %}text-red-700{% endif %}">{{ submission.hod_comment }}</p>
+  </div>
+  {% endif %}
 
   {# Urgency callout #}
   {% if submission.request_type == 'urgent' %}

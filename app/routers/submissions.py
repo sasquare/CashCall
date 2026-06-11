@@ -32,7 +32,9 @@ from app.dependencies import get_current_user, require_role
 from app.models.submission import Submission
 from app.models.user import User
 from app.schemas.submission import LineItemIn, SubmissionIn, UrgentSubmissionIn
-from app.services.submission_service import create_submission
+from app.models.line_item import LineItem
+from app.models.audit_log import AuditLog
+from app.services.submission_service import create_submission, convert_to_usd
 
 logger = logging.getLogger(__name__)
 
@@ -404,4 +406,187 @@ async def submission_detail(
     return tmpl.TemplateResponse(
         "submissions/detail.html",
         _get_template_ctx(request, user=current_user, submission=submission),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Edit & resubmit (only for hod_returned submissions)
+# ---------------------------------------------------------------------------
+
+@router.get("/{submission_id}/edit", response_class=HTMLResponse)
+async def edit_submission_form(
+    request: Request,
+    submission_id: str,
+    current_user: User = Depends(require_role("originator")),
+    db: Session = Depends(get_db),
+):
+    sub = db.query(Submission).filter(Submission.submission_id == submission_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    if sub.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if sub.status != "hod_returned":
+        raise HTTPException(status_code=409, detail="Only returned submissions can be edited")
+
+    existing_rows = [
+        {
+            "vendor_name": li.vendor_name,
+            "invoice_no": li.invoice_no,
+            "po_number": li.po_number or "",
+            "description": li.description,
+            "items_products": li.items_products or "",
+            "category": li.category,
+            "account_code": li.account_code,
+            "billing_period_start": str(li.billing_period_start),
+            "billing_period_end": str(li.billing_period_end),
+            "payment_tracking_code": li.payment_tracking_code or "",
+            "frequency": li.frequency,
+            "status_remarks": li.status_remarks or "",
+            "currency": li.currency,
+            "original_amount": str(li.original_amount),
+            "is_arrear": li.is_arrear,
+            "arrear_type": li.arrear_type or "",
+        }
+        for li in sub.line_items
+    ]
+    form_data = {
+        "department": sub.department,
+        "month": str(sub.month),
+        "year": str(sub.year),
+        "cost_type": sub.cost_type,
+        "supporting_justification": sub.supporting_justification,
+    }
+    tmpl = _templates(request)
+    return tmpl.TemplateResponse(
+        "submissions/new.html",
+        _get_template_ctx(
+            request,
+            user=current_user,
+            department_groups=DEPARTMENT_GROUPS,
+            categories=CASH_CALL_CATEGORIES,
+            currencies=CURRENCIES,
+            frequencies=PAYMENT_FREQUENCIES,
+            arrear_types=ARREAR_TYPES,
+            errors=None,
+            form_data=form_data,
+            line_item_rows=existing_rows,
+            editing_submission=sub,
+            hod_comment=sub.hod_comment,
+        ),
+    )
+
+
+@router.post("/{submission_id}/edit", response_class=HTMLResponse)
+async def resubmit_submission(
+    request: Request,
+    submission_id: str,
+    current_user: User = Depends(require_role("originator")),
+    db: Session = Depends(get_db),
+):
+    sub = db.query(Submission).filter(Submission.submission_id == submission_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    if sub.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if sub.status != "hod_returned":
+        raise HTTPException(status_code=409, detail="Only returned submissions can be resubmitted")
+
+    form = dict(await request.form())
+    raw_items = _parse_line_items_from_form(form)
+
+    payload = {
+        "department": form.get("department", sub.department),
+        "month": form.get("month", str(sub.month)),
+        "year": form.get("year", str(sub.year)),
+        "cost_type": form.get("cost_type", sub.cost_type),
+        "supporting_justification": form.get("supporting_justification", ""),
+        "line_items": raw_items,
+    }
+
+    errors: list[str] = []
+    submission_in: SubmissionIn | None = None
+    try:
+        submission_in = SubmissionIn(**payload)
+    except ValidationError as exc:
+        for e in exc.errors():
+            loc = " → ".join(str(x) for x in e["loc"])
+            errors.append(f"{loc}: {e['msg']}")
+
+    tmpl = _templates(request)
+    if errors or submission_in is None:
+        return tmpl.TemplateResponse(
+            "submissions/new.html",
+            _get_template_ctx(
+                request,
+                user=current_user,
+                department_groups=DEPARTMENT_GROUPS,
+                categories=CASH_CALL_CATEGORIES,
+                currencies=CURRENCIES,
+                frequencies=PAYMENT_FREQUENCIES,
+                arrear_types=ARREAR_TYPES,
+                errors=errors,
+                form_data=form,
+                line_item_rows=raw_items,
+                editing_submission=sub,
+                hod_comment=sub.hod_comment,
+            ),
+            status_code=422,
+        )
+
+    # Delete old line items and replace with new ones
+    for li in sub.line_items:
+        db.delete(li)
+    db.flush()
+
+    from datetime import datetime, timezone
+    from decimal import Decimal
+    now = datetime.now(timezone.utc)
+
+    sub.department = submission_in.department
+    sub.month = submission_in.month
+    sub.year = submission_in.year
+    sub.cost_type = submission_in.cost_type
+    sub.supporting_justification = submission_in.supporting_justification
+    sub.status = "pending_hod"
+    sub.hod_decision = None
+    sub.hod_comment = None
+    sub.hod_decided_at = None
+    sub.hod_decided_by = None
+
+    for item in submission_in.line_items:
+        equiv_usd, rate_used = convert_to_usd(item.original_amount, item.currency, db)
+        db.add(LineItem(
+            submission_id=sub.id,
+            vendor_name=item.vendor_name,
+            invoice_no=item.invoice_no,
+            po_number=item.po_number,
+            description=item.description,
+            items_products=item.items_products,
+            category=item.category,
+            account_code=item.account_code,
+            billing_period_start=item.billing_period_start,
+            billing_period_end=item.billing_period_end,
+            payment_tracking_code=item.payment_tracking_code,
+            frequency=item.frequency,
+            status_remarks=item.status_remarks,
+            currency=item.currency,
+            original_amount=item.original_amount,
+            equivalent_usd=equiv_usd,
+            exchange_rate_used=rate_used,
+            is_arrear=item.is_arrear,
+            arrear_type=item.arrear_type,
+        ))
+
+    db.add(AuditLog(
+        submission_id=sub.id,
+        action="resubmitted",
+        outcome="pending_hod",
+        performed_by=current_user.id,
+        notes="Originator resubmitted after HOD return.",
+    ))
+    db.commit()
+
+    return RedirectResponse(
+        url=f"/submissions/{submission_id}/confirmation",
+        status_code=303,
     )

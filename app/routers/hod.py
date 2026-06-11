@@ -20,6 +20,7 @@ from app.dependencies import require_role
 from app.models.audit_log import AuditLog
 from app.models.submission import Submission
 from app.models.user import User
+from app.services.email_service import notify_hod_declined, notify_hod_returned
 
 router = APIRouter(prefix="/hod", tags=["hod"])
 
@@ -179,6 +180,10 @@ async def hod_return(
     ))
     db.commit()
 
+    originator = db.query(User).filter(User.id == sub.creator_id).first()
+    if originator:
+        notify_hod_returned(originator.email, submission_id, comment.strip())
+
     return RedirectResponse(url=f"/hod/submissions/{submission_id}?action=returned", status_code=303)
 
 
@@ -214,5 +219,9 @@ async def hod_decline(
         notes=f"Declined by HOD {current_user.display_name}. Reason: {comment.strip()}",
     ))
     db.commit()
+
+    originator = db.query(User).filter(User.id == sub.creator_id).first()
+    if originator:
+        notify_hod_declined(originator.email, submission_id, comment.strip())
 
     return RedirectResponse(url=f"/hod/submissions/{submission_id}?action=declined", status_code=303)
