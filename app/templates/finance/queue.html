@@ -1,18 +1,18 @@
 {% extends "base.html" %}
-{% block title %}HOD Approval Queue{% endblock %}
+{% block title %}Finance QC Queue{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto">
 
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Approval Queue</h1>
-    <p class="mt-1 text-sm text-gray-500">Cash calls pending your review — {{ user.department }}</p>
+    <h1 class="text-2xl font-bold text-gray-900">Finance QC Queue</h1>
+    <p class="mt-1 text-sm text-gray-500">Submissions approved by HOD awaiting quality check.</p>
   </div>
 
   {# Pending #}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
     <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Pending Review</h2>
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Pending QC</h2>
       {% if pending %}
       <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
         {{ pending | length }}
@@ -27,18 +27,18 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
         </svg>
       </div>
-      <p class="text-sm text-gray-500">No submissions pending your review.</p>
+      <p class="text-sm text-gray-500">No submissions pending QC.</p>
     </div>
     {% else %}
     <table class="w-full text-sm">
       <thead>
         <tr class="bg-gray-50 border-b border-gray-100">
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ID</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Department</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Type</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
           <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Items</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Submitted</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Flag</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
@@ -46,17 +46,19 @@
         {% for sub in pending %}
         <tr class="hover:bg-amber-50 transition-colors">
           <td class="px-4 py-3 font-mono font-semibold text-gray-900">{{ sub.submission_id }}</td>
-          <td class="px-4 py-3 text-gray-700">{{ sub.month_name }}</td>
-          <td class="px-4 py-3"><span class="text-xs font-medium uppercase text-gray-500">{{ sub.cost_type }}</span></td>
-          <td class="px-4 py-3 text-right text-gray-600">{{ sub.line_items | length }}</td>
-          <td class="px-4 py-3 text-gray-500 text-xs">{{ sub.created_at.strftime('%d %b %Y') }}</td>
+          <td class="px-4 py-3 text-gray-700 truncate max-w-[160px]" title="{{ sub.department }}">{{ sub.department }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ sub.month_name }}</td>
           <td class="px-4 py-3">
-            {% if sub.budget_over_limit_flag %}
-            <span class="badge badge-red text-xs">Over Budget</span>
+            {% if sub.status == 'qc_query_raised' %}
+            <span class="badge badge-amber text-xs">Query Raised</span>
+            {% else %}
+            <span class="badge badge-gray text-xs">Pending QC</span>
             {% endif %}
           </td>
+          <td class="px-4 py-3 text-right text-gray-600">{{ sub.line_items | length }}</td>
+          <td class="px-4 py-3 text-gray-500 text-xs">{{ sub.created_at.strftime('%d %b %Y') }}</td>
           <td class="px-4 py-3 text-right">
-            <a href="/hod/submissions/{{ sub.submission_id }}"
+            <a href="/finance/submissions/{{ sub.submission_id }}"
                class="inline-flex items-center gap-1 rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-800 transition-colors">
               Review →
             </a>
@@ -68,7 +70,7 @@
     {% endif %}
   </div>
 
-  {# Recently Reviewed #}
+  {# Recently reviewed #}
   {% if reviewed %}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-100">
@@ -78,28 +80,30 @@
       <thead>
         <tr class="bg-gray-50 border-b border-gray-100">
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ID</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Department</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Decision</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Decided</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">QC Decision</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Reviewed</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-50">
-        {% set badge_map = {'approved':'green','returned':'amber','declined':'red'} %}
+        {% set badge_map = {'approved':'green','returned':'amber','query_raised':'amber'} %}
         {% for sub in reviewed %}
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-4 py-3 font-mono text-gray-700">{{ sub.submission_id }}</td>
+          <td class="px-4 py-3 text-gray-600 truncate max-w-[160px]">{{ sub.department }}</td>
           <td class="px-4 py-3 text-gray-600">{{ sub.month_name }}</td>
           <td class="px-4 py-3">
-            <span class="badge badge-{{ badge_map.get(sub.hod_decision, 'gray') }} text-xs">
-              {{ sub.hod_decision | title if sub.hod_decision else '—' }}
+            <span class="badge badge-{{ badge_map.get(sub.finance_qc_status, 'gray') }} text-xs">
+              {{ sub.finance_qc_status | replace('_',' ') | title if sub.finance_qc_status else '—' }}
             </span>
           </td>
           <td class="px-4 py-3 text-gray-500 text-xs">
-            {{ sub.hod_decided_at.strftime('%d %b %Y') if sub.hod_decided_at else '—' }}
+            {{ sub.finance_qc_at.strftime('%d %b %Y') if sub.finance_qc_at else '—' }}
           </td>
           <td class="px-4 py-3 text-right">
-            <a href="/hod/submissions/{{ sub.submission_id }}" class="text-green-700 hover:text-green-900 text-xs font-medium">View →</a>
+            <a href="/finance/submissions/{{ sub.submission_id }}" class="text-green-700 hover:text-green-900 text-xs font-medium">View →</a>
           </td>
         </tr>
         {% endfor %}

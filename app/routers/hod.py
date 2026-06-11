@@ -71,7 +71,7 @@ async def hod_queue(
         db.query(Submission)
         .filter(
             Submission.department == current_user.department,
-            Submission.status.in_(["hod_approved", "hod_returned", "hod_declined"]),
+            Submission.hod_decision.in_(["approved", "returned", "declined"]),
         )
         .order_by(Submission.hod_decided_at.desc())
         .limit(20)
@@ -127,7 +127,7 @@ async def hod_approve(
     sub = _get_submission_for_hod(submission_id, current_user, db)
     now = datetime.now(timezone.utc)
 
-    sub.status = "hod_approved"
+    sub.status = "pending_finance_qc"
     sub.hod_decision = "approved"
     sub.hod_comment = comment.strip() or None
     sub.hod_decided_at = now
@@ -136,7 +136,7 @@ async def hod_approve(
     db.add(AuditLog(
         submission_id=sub.id,
         action="hod_approved",
-        outcome="hod_approved",
+        outcome="pending_finance_qc",
         performed_by=current_user.id,
         notes=f"HOD approved by {current_user.display_name}."
               + (f" Comment: {comment.strip()}" if comment.strip() else ""),

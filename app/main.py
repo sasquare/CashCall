@@ -11,6 +11,8 @@ import app.models  # noqa: F401 — registers all ORM models
 from app.routers import auth as auth_router
 from app.routers import submissions as submissions_router
 from app.routers import hod as hod_router
+from app.routers import finance_qc as finance_qc_router
+from app.routers import cfo as cfo_router
 
 app = FastAPI(
     title=settings.APP_TITLE,
@@ -33,6 +35,8 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(auth_router.router)
 app.include_router(submissions_router.router)
 app.include_router(hod_router.router)
+app.include_router(finance_qc_router.router)
+app.include_router(cfo_router.router)
 
 
 # ---------------------------------------------------------------------------
