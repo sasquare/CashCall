@@ -139,11 +139,11 @@
   </div>
 
   {# Audit log #}
-  {% if submission.audit_logs %}
+  {% if submission.audit_log %}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
     <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Audit Trail</h2>
     <ol class="relative border-l border-gray-200 ml-3 space-y-4">
-      {% for log in submission.audit_logs | sort(attribute='performed_at') %}
+      {% for log in submission.audit_log | sort(attribute='performed_at') %}
       <li class="ml-4">
         <div class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full bg-gray-300 border-2 border-white"></div>
         <div class="flex flex-wrap items-baseline gap-2">
