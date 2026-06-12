@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <rect width="200" height="60" rx="8" fill="#003087"/>
+  <text x="16" y="38" font-size="26" font-weight="800" font-family="Arial,sans-serif" fill="#ffffff" letter-spacing="-0.5">DANGOTE</text>
+  <rect x="16" y="44" width="130" height="2.5" fill="#CC0000" rx="1.25"/>
+  <text x="16" y="56" font-size="9" font-family="Arial,sans-serif" fill="#7fa8d8" letter-spacing="0.5">PETROLEUM REFINERY</text>
+</svg>

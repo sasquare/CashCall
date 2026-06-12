@@ -56,7 +56,9 @@ def clear_session(request: Request) -> None:
 
 def authenticate_dev(email: str, password: str, db: Session) -> User | None:
     """Return the User if credentials are valid, else None."""
-    if not settings.DEV_BYPASS_ENABLED or not settings.is_development:
+    azure_configured = bool(settings.AZURE_CLIENT_ID)
+    # Allow password auth when Azure SSO is not configured, or explicitly in dev mode
+    if azure_configured and (not settings.DEV_BYPASS_ENABLED or not settings.is_development):
         return None
     user = db.query(User).filter(
         User.email == email.lower().strip(),
