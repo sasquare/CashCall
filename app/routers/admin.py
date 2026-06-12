@@ -433,7 +433,7 @@ async def audit_log(
 @router.get("/reports", response_class=HTMLResponse)
 async def reports(
     request: Request,
-    current_user: User = Depends(require_role("it_admin")),
+    current_user: User = Depends(require_role("it_admin", "cfo", "ceo", "finance_reviewer")),
     db: Session = Depends(get_db),
 ):
     today = date.today()

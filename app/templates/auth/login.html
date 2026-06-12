@@ -1,130 +1,178 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sign In — DPRP Cash Call</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin:0; font-family:ui-sans-serif,system-ui,sans-serif; }
+    .page-wrap { min-height:100vh; display:flex; }
+    .left-panel {
+      display:none;
+      flex:1;
+      background:linear-gradient(160deg,#003087 0%,#00205a 60%,#001439 100%);
+      position:relative;
+      overflow:hidden;
+      align-items:center;
+      justify-content:center;
+      padding:3rem;
+    }
+    @media(min-width:900px){ .left-panel { display:flex; flex-direction:column; } }
+    .left-panel::before {
+      content:'';
+      position:absolute;
+      top:-80px; right:-80px;
+      width:350px; height:350px;
+      border-radius:50%;
+      background:rgba(255,255,255,0.04);
+    }
+    .left-panel::after {
+      content:'';
+      position:absolute;
+      bottom:-120px; left:-60px;
+      width:420px; height:420px;
+      border-radius:50%;
+      background:rgba(204,0,0,0.08);
+    }
+    .right-panel {
+      width:100%;
+      max-width:480px;
+      margin:auto;
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:3rem 2rem;
+    }
+    @media(min-width:900px){ .right-panel { box-shadow:-4px 0 30px rgba(0,0,0,0.1); min-height:100vh; } }
+    input { border:1px solid #d1d5db; border-radius:0.5rem; padding:0.625rem 0.875rem; font-size:0.9rem; width:100%; outline:none; transition:border-color 0.15s,box-shadow 0.15s; box-sizing:border-box; }
+    input:focus { border-color:#003087; box-shadow:0 0 0 3px rgba(0,48,135,0.12); }
+  </style>
 </head>
-<body class="h-full">
+<body>
+<div class="page-wrap">
 
-<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-
-  {# Header #}
-  <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
-    <div class="mx-auto w-16 h-16 bg-green-700 rounded-full flex items-center justify-center mb-4">
-      <svg class="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-      </svg>
+  {# Left decorative panel #}
+  <div class="left-panel">
+    <div style="position:relative;z-index:1;text-align:center;">
+      <img src="/static/dangote-logo.png" alt="Dangote" style="height:80px;margin:0 auto 1.5rem;display:block;filter:brightness(0) invert(1);" onerror="this.style.display='none'">
+      <h1 style="color:#fff;font-size:2rem;font-weight:800;margin:0 0 0.5rem;letter-spacing:-0.02em;">DPRP Cash Call</h1>
+      <p style="color:#7fa8d8;font-size:1rem;margin:0 0 3rem;">Dangote Petroleum Refinery &amp; Petrochemicals FZE</p>
+      <div style="display:flex;flex-direction:column;gap:1.25rem;text-align:left;">
+        {% for label in ["5-stage digital approval workflow","Real-time submission tracking","Multi-currency support (USD, NGN, EUR, GBP, INR)","Full audit trail &amp; reporting"] %}
+        <div style="display:flex;align-items:center;gap:0.875rem;">
+          <div style="width:2rem;height:2rem;border-radius:50%;background:rgba(204,0,0,0.25);border:1px solid rgba(204,0,0,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg style="width:1rem;height:1rem;color:#ff8080;" fill="none" viewBox="0 0 24 24" stroke="#ff9999" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <span style="color:#c5d9f5;font-size:0.9rem;">{{ label }}</span>
+        </div>
+        {% endfor %}
+      </div>
     </div>
-    <h1 class="text-2xl font-bold text-gray-900">DPRP Cash Call</h1>
-    <p class="mt-1 text-sm text-gray-500">Dangote Petroleum Refinery &amp; Petrochemicals</p>
   </div>
 
-  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-    <div class="bg-white py-8 px-6 shadow-sm rounded-xl border border-gray-100">
+  {# Right login panel #}
+  <div class="right-panel">
+    <div style="width:100%;">
+
+      {# Mobile logo (shown only on small screens) #}
+      <div style="text-align:center;margin-bottom:2rem;" class="block lg:hidden">
+        <img src="/static/dangote-logo.png" alt="Dangote" style="height:50px;margin:0 auto 1rem;display:block;" onerror="this.style.display='none'">
+        <h1 style="color:#003087;font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;">DPRP Cash Call</h1>
+        <p style="color:#6b7280;font-size:0.875rem;margin:0;">Dangote Petroleum Refinery</p>
+      </div>
+
+      <div style="margin-bottom:1.75rem;">
+        <h2 style="color:#003087;font-size:1.4rem;font-weight:700;margin:0 0 0.25rem;">Welcome back</h2>
+        <p style="color:#6b7280;font-size:0.875rem;margin:0;">Sign in to your account to continue</p>
+      </div>
 
       {# Error banner #}
       {% if error %}
-      <div class="mb-5 rounded-md bg-red-50 border border-red-200 p-3">
-        <p class="text-sm text-red-700">
-          {% if error == "auth_failed" %}
-            Authentication failed. Please try again or contact IT Admin.
-          {% elif error == "azure_not_configured" %}
-            Microsoft login is not configured. Use the dev login below.
-          {% elif error == "dev_disabled" %}
-            Developer login is not available in this environment.
-          {% else %}
-            {{ error }}
-          {% endif %}
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:0.5rem;padding:0.75rem 1rem;margin-bottom:1.25rem;">
+        <p style="color:#991b1b;font-size:0.875rem;margin:0;">
+          {% if error == "auth_failed" %}Authentication failed. Check your credentials or contact IT Admin.
+          {% elif error == "azure_not_configured" %}Microsoft login is not configured. Use dev login below.
+          {% elif error == "dev_disabled" %}Developer login is not available in this environment.
+          {% else %}{{ error }}{% endif %}
         </p>
       </div>
       {% endif %}
 
-      {# Microsoft SSO button — shown when Azure is configured #}
+      {# Microsoft SSO #}
       {% if azure_configured %}
       <a href="/login/microsoft"
-         class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors">
-        {# Microsoft logo SVG #}
-        <svg class="h-5 w-5" viewBox="0 0 21 21" fill="none">
-          <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
-          <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
-          <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
+         style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.75rem;font-size:0.875rem;font-weight:500;color:#374151;background:#fff;text-decoration:none;transition:background 0.15s,border-color 0.15s;box-sizing:border-box;margin-bottom:1.5rem;"
+         onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+        <svg style="width:1.25rem;height:1.25rem;flex-shrink:0;" viewBox="0 0 21 21" fill="none">
+          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
           <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
         </svg>
         Sign in with Microsoft 365
       </a>
       {% else %}
-      <div class="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-400 cursor-not-allowed">
-        <svg class="h-5 w-5" viewBox="0 0 21 21" fill="none">
-          <rect x="1"  y="1"  width="9" height="9" fill="#ccc"/>
-          <rect x="11" y="1"  width="9" height="9" fill="#ccc"/>
-          <rect x="1"  y="11" width="9" height="9" fill="#ccc"/>
-          <rect x="11" y="11" width="9" height="9" fill="#ccc"/>
+      <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.75rem;font-size:0.875rem;color:#9ca3af;background:#f9fafb;cursor:not-allowed;box-sizing:border-box;margin-bottom:1.5rem;">
+        <svg style="width:1.25rem;height:1.25rem;flex-shrink:0;" viewBox="0 0 21 21" fill="none">
+          <rect x="1" y="1" width="9" height="9" fill="#ddd"/>
+          <rect x="11" y="1" width="9" height="9" fill="#ddd"/>
+          <rect x="1" y="11" width="9" height="9" fill="#ddd"/>
+          <rect x="11" y="11" width="9" height="9" fill="#ddd"/>
         </svg>
         Microsoft 365 (not configured)
       </div>
       {% endif %}
 
-      {# Dev bypass — only in development mode #}
+      {# Dev bypass #}
       {% if dev_mode %}
-      <div class="mt-6">
-        <div class="relative">
-          <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-gray-200"></div>
-          </div>
-          <div class="relative flex justify-center text-sm">
-            <span class="bg-white px-3 text-amber-600 font-medium">Dev login</span>
-          </div>
+      <div style="position:relative;margin-bottom:1.25rem;">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;"><div style="width:100%;border-top:1px solid #e5e7eb;"></div></div>
+        <div style="position:relative;display:flex;justify-content:center;">
+          <span style="background:#fff;padding:0 0.75rem;font-size:0.8rem;color:#d97706;font-weight:600;">Dev login</span>
         </div>
+      </div>
 
-        <form action="/login/dev" method="post" class="mt-5 space-y-4">
-          <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input id="email" name="email" type="email" required autocomplete="email"
-                   value="{{ prefill_email or '' }}"
-                   placeholder="e.g. cfo@dangote.com"
-                   class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm
-                          placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"/>
-          </div>
-          <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input id="password" name="password" type="password" required autocomplete="current-password"
-                   class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm
-                          focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"/>
-          </div>
-          <button type="submit"
-                  class="w-full rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white
-                         shadow-sm hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600
-                         focus:ring-offset-2 transition-colors">
-            Sign in
-          </button>
-        </form>
+      <form action="/login/dev" method="post" style="display:flex;flex-direction:column;gap:1rem;">
+        <div>
+          <label style="display:block;font-size:0.8rem;font-weight:600;color:#003087;margin-bottom:0.375rem;">Email</label>
+          <input type="email" name="email" required autocomplete="email"
+                 value="{{ prefill_email or '' }}"
+                 placeholder="e.g. cfo@dangote.com">
+        </div>
+        <div>
+          <label style="display:block;font-size:0.8rem;font-weight:600;color:#003087;margin-bottom:0.375rem;">Password</label>
+          <input type="password" name="password" required autocomplete="current-password">
+        </div>
+        <button type="submit"
+                style="width:100%;background:#003087;color:#fff;padding:0.75rem;border-radius:0.5rem;font-weight:700;font-size:0.9rem;border:none;cursor:pointer;transition:background 0.15s;letter-spacing:0.01em;"
+                onmouseover="this.style.background='#0042b8'" onmouseout="this.style.background='#003087'">
+          Sign in
+        </button>
+      </form>
 
-        <div class="mt-4 rounded-md bg-amber-50 border border-amber-200 p-3">
-          <p class="text-xs text-amber-700 font-medium mb-1">Development credentials</p>
-          <div class="text-xs text-amber-600 space-y-0.5 font-mono">
-            <div>cfo@dangote.com / CFO@12345</div>
-            <div>ceo@dangote.com / CEO@12345</div>
-            <div>hod.fin@dangote.com / HOD@12345</div>
-            <div>originator.fin@dangote.com / Orig@1234</div>
-            <div>finance.reviewer@dangote.com / Finance@123</div>
-            <div>treasury@dangote.com / Treasury@123</div>
-            <div>it.admin@dangote.com / ITAdmin@123</div>
-          </div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:0.5rem;padding:0.875rem;margin-top:1.25rem;">
+        <p style="font-size:0.75rem;font-weight:700;color:#92400e;margin:0 0 0.5rem;">Development Credentials</p>
+        <div style="font-size:0.72rem;font-family:monospace;color:#b45309;display:flex;flex-direction:column;gap:0.2rem;">
+          <div>cfo@dangote.com / CFO@12345</div>
+          <div>ceo@dangote.com / CEO@12345</div>
+          <div>hod.it@dangote.com / HOD@12345</div>
+          <div>originator.it@dangote.com / Orig@1234</div>
+          <div>finance.reviewer@dangote.com / Finance@123</div>
+          <div>treasury@dangote.com / Treasury@123</div>
+          <div>it.admin@dangote.com / ITAdmin@123</div>
         </div>
       </div>
       {% endif %}
 
+      <p style="text-align:center;font-size:0.75rem;color:#9ca3af;margin-top:1.5rem;">
+        Access issues? Contact <a href="mailto:it.admin@dangote.com" style="color:#003087;font-weight:600;">IT Admin</a>
+      </p>
+
     </div>
-
-    <p class="mt-6 text-center text-xs text-gray-400">
-      For access issues contact
-      <a href="mailto:it.admin@dangote.com" class="text-green-700 hover:underline">IT Admin</a>
-    </p>
   </div>
-</div>
 
+</div>
 </body>
 </html>
