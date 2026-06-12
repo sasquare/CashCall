@@ -4,9 +4,9 @@ set -e
 echo "[entrypoint] Running Alembic migrations…"
 alembic upgrade head
 
-# Optionally seed initial data in development
-if [ "${APP_ENV:-development}" = "development" ] && [ "${SEED_DB:-false}" = "true" ]; then
-    echo "[entrypoint] Seeding development data…"
+# Seed if SEED_DB=true regardless of environment
+if [ "${SEED_DB:-false}" = "true" ]; then
+    echo "[entrypoint] Seeding data…"
     python scripts/seed.py
 fi
 
