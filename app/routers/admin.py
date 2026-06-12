@@ -459,10 +459,10 @@ async def reports(
         if d not in dept_totals:
             dept_totals[d] = {"count": 0, "total_usd": 0.0, "paid": 0.0, "pending": 0, "urgent": 0}
         dept_totals[d]["count"] += 1
-        active_usd = sum(li.equivalent_usd for li in sub.line_items if not li.cfo_deferred)
+        active_usd = float(sum(li.equivalent_usd for li in sub.line_items if not li.cfo_deferred))
         dept_totals[d]["total_usd"] += active_usd
         if sub.status == "paid":
-            dept_totals[d]["paid"] += active_usd
+            dept_totals[d]["paid"] += float(active_usd)
         elif sub.status in ("pending_hod", "pending_finance_qc", "qc_query_raised",
                             "pending_cfo", "pending_ceo", "pending_treasury_payment"):
             dept_totals[d]["pending"] += 1
