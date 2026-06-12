@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}DPRP Cash Call{% endblock %} — Dangote Petroleum Refinery</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23003087'/><text x='16' y='22' font-size='16' font-weight='bold' text-anchor='middle' fill='white' font-family='sans-serif'>D</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dblue:  { DEFAULT: '#003087', light: '#0042b8', dark: '#00205a', 50: '#e6edf8', 100: '#c0d2ef', 200: '#8aaee0', 300: '#558bd1', 400: '#2d6ec8', 500: '#003087', 600: '#00266d', 700: '#001d53', 800: '#001439', 900: '#000a1e' },
+            dred:   { DEFAULT: '#CC0000', light: '#e60000', dark: '#990000', 50: '#ffe6e6', 100: '#ffb3b3', 200: '#ff8080', 300: '#ff4d4d', 400: '#ff1a1a', 500: '#CC0000', 600: '#b30000', 700: '#990000', 800: '#800000', 900: '#660000' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #f0f4fa; }
+    .badge        { display:inline-flex; align-items:center; padding:0.125rem 0.625rem; border-radius:9999px; font-size:0.75rem; font-weight:500; }
+    .badge-green  { background:#dcfce7; color:#166534; }
+    .badge-amber  { background:#fef9c3; color:#854d0e; }
+    .badge-red    { background:#fee2e2; color:#991b1b; }
+    .badge-purple { background:#f3e8ff; color:#6b21a8; }
+    .badge-blue   { background:#dbeafe; color:#1e40af; }
+    .badge-gray   { background:#f3f4f6; color:#374151; }
+    .nav-link     { color:#bcd0f5; font-size:0.875rem; font-weight:500; padding:0.375rem 0.75rem; border-radius:0.375rem; transition:background 0.15s,color 0.15s; display:inline-block; }
+    .nav-link:hover { background:rgba(255,255,255,0.15); color:#fff; }
+    .nav-link.active { background:rgba(255,255,255,0.2); color:#fff; }
+    .mob-link     { color:#bcd0f5; font-size:0.75rem; padding:0.25rem 0.5rem; border-radius:0.25rem; background:rgba(255,255,255,0.08); }
+    .mob-link:hover { background:rgba(255,255,255,0.18); color:#fff; }
+    .btn-primary  { background:#003087; color:#fff; padding:0.5rem 1.25rem; border-radius:0.5rem; font-weight:600; font-size:0.875rem; transition:background 0.15s; }
+    .btn-primary:hover { background:#0042b8; }
+    .btn-danger   { background:#CC0000; color:#fff; padding:0.5rem 1.25rem; border-radius:0.5rem; font-weight:600; font-size:0.875rem; transition:background 0.15s; }
+    .btn-danger:hover { background:#b30000; }
+    .card         { background:#fff; border-radius:0.75rem; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,0.07); }
+    input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], select, textarea {
+      border:1px solid #d1d5db; border-radius:0.375rem; padding:0.5rem 0.75rem; font-size:0.875rem; width:100%; outline:none; background:#fff;
+    }
+    input:focus, select:focus, textarea:focus { border-color:#003087; box-shadow:0 0 0 2px rgba(0,48,135,0.15); }
+    table { width:100%; border-collapse:collapse; }
+    thead th { background:#003087; color:#fff; padding:0.625rem 1rem; text-align:left; font-size:0.75rem; font-weight:600; letter-spacing:0.05em; }
+    tbody tr:hover { background:#f5f8ff; }
+    tbody td { padding:0.75rem 1rem; font-size:0.875rem; border-bottom:1px solid #f3f4f6; }
+  </style>
+</head>
+<body class="h-full">
+
+{% if user is defined and user %}
+{# ── Authenticated layout ──────────────────────────────────────────── #}
+<div class="min-h-full flex flex-col">
+
+  {# Top navigation bar #}
+  <nav style="background:linear-gradient(90deg,#003087 0%,#00205a 100%); box-shadow:0 2px 8px rgba(0,48,135,0.25);">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="flex h-16 items-center justify-between gap-4">
+
+        {# Logo + app name #}
+        <a href="/" class="flex items-center gap-3 flex-shrink-0">
+          <img src="/static/dangote-logo.png" alt="Dangote" class="h-9 w-auto" onerror="this.style.display='none'">
+          <div class="leading-tight">
+            <div class="text-white font-bold text-base tracking-wide">DPRP <span style="color:#ff9999;">Cash Call</span></div>
+            <div class="text-blue-200 text-xs font-light">Dangote Petroleum Refinery</div>
+          </div>
+        </a>
+
+        {# Desktop nav links #}
+        <div class="hidden md:flex md:items-center md:gap-0.5 flex-1 justify-center">
+          {% set role = user.role %}
+
+          {% if role == "originator" %}
+            <a href="/submissions/new"  class="nav-link">New Submission</a>
+            <a href="/submissions/mine" class="nav-link">My Submissions</a>
+          {% endif %}
+
+          {% if role == "hod" %}
+            <a href="/hod/queue"   class="nav-link">Pending Approvals</a>
+          {% endif %}
+
+          {% if role == "finance_reviewer" %}
+            <a href="/finance/queue"         class="nav-link">QC Queue</a>
+            <a href="/submissions/urgent/new" class="nav-link">New Urgent</a>
+          {% endif %}
+
+          {% if role == "cfo" %}
+            <a href="/cfo/queue"    class="nav-link">CFO Queue</a>
+          {% endif %}
+
+          {% if role == "ceo" %}
+            <a href="/ceo/queue"    class="nav-link">CEO Queue</a>
+          {% endif %}
+
+          {% if role == "treasury" %}
+            <a href="/treasury/queue" class="nav-link">Payment Queue</a>
+          {% endif %}
+
+          {% if role in ["cfo", "ceo", "finance_reviewer", "it_admin"] %}
+            <a href="/admin/reports" class="nav-link">Reports</a>
+          {% endif %}
+
+          {% if role == "it_admin" %}
+            <a href="/admin"         class="nav-link">Dashboard</a>
+            <a href="/admin/users"   class="nav-link">Users</a>
+            <a href="/admin/rates"   class="nav-link">Rates</a>
+            <a href="/admin/budgets" class="nav-link">Budgets</a>
+            <a href="/admin/audit"   class="nav-link">Audit Log</a>
+            <a href="/admin/reports" class="nav-link">Reports</a>
+          {% endif %}
+        </div>
+
+        {# User menu #}
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <div class="text-right hidden sm:block">
+            <p class="text-white text-sm font-semibold leading-tight">{{ user.display_name }}</p>
+            <p style="color:#99bbee;" class="text-xs mt-0.5 capitalize">{{ user.role | replace("_", " ") | title }}{% if user.department %} · {{ user.department | truncate(25, true, "…") }}{% endif %}</p>
+          </div>
+          <div class="flex items-center gap-1">
+            <a href="/profile" class="nav-link text-xs">Profile</a>
+            <a href="/logout"  style="background:rgba(204,0,0,0.7); color:#fff; font-size:0.75rem; padding:0.3rem 0.75rem; border-radius:0.375rem; font-weight:600; transition:background 0.15s;" onmouseover="this.style.background='#CC0000'" onmouseout="this.style.background='rgba(204,0,0,0.7)'">Sign out</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# Mobile nav #}
+    <div class="md:hidden border-t border-blue-800 px-4 py-2 flex flex-wrap gap-2">
+      {% set role = user.role %}
+      {% if role == "originator" %}
+        <a href="/submissions/new"  class="mob-link">New</a>
+        <a href="/submissions/mine" class="mob-link">Mine</a>
+      {% endif %}
+      {% if role == "hod" %}
+        <a href="/hod/queue"   class="mob-link">Queue</a>
+      {% endif %}
+      {% if role == "finance_reviewer" %}
+        <a href="/finance/queue" class="mob-link">QC Queue</a>
+      {% endif %}
+      {% if role == "cfo" %}
+        <a href="/cfo/queue"  class="mob-link">CFO Queue</a>
+      {% endif %}
+      {% if role == "ceo" %}
+        <a href="/ceo/queue"  class="mob-link">CEO Queue</a>
+      {% endif %}
+      {% if role == "treasury" %}
+        <a href="/treasury/queue" class="mob-link">Payments</a>
+      {% endif %}
+      {% if role in ["cfo", "ceo", "finance_reviewer", "it_admin"] %}
+        <a href="/admin/reports" class="mob-link">Reports</a>
+      {% endif %}
+      {% if role == "it_admin" %}
+        <a href="/admin/users"   class="mob-link">Users</a>
+        <a href="/admin/rates"   class="mob-link">Rates</a>
+        <a href="/admin/budgets" class="mob-link">Budgets</a>
+        <a href="/admin/audit"   class="mob-link">Audit</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  {# Page content #}
+  <main class="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+
+    {# Flash messages #}
+    {% if flash_success %}
+    <div class="mb-6 rounded-lg bg-green-50 border border-green-200 p-4 flex gap-3">
+      <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+      <p class="text-sm text-green-800">{{ flash_success }}</p>
+    </div>
+    {% endif %}
+
+    {% if flash_error %}
+    <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 flex gap-3">
+      <svg class="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-9a1 1 0 012 0v4a1 1 0 01-2 0V9zm1-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg>
+      <p class="text-sm text-red-800">{{ flash_error }}</p>
+    </div>
+    {% endif %}
+
+    {# Dev mode warning #}
+    {% if request.url.hostname in ["localhost", "127.0.0.1"] %}
+    <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 flex items-center gap-2">
+      <svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      Development mode — dev login bypass active. Azure AD SSO will be used in production.
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer style="background:#00205a; color:#7fa8d8; font-size:0.75rem; text-align:center; padding:0.75rem;">
+    © {{ 2026 }} Dangote Petroleum Refinery &amp; Petrochemicals FZE &nbsp;·&nbsp; DPRP Cash Call System
+  </footer>
+</div>
+
+{% else %}
+{# ── Unauthenticated layout ──────────────────────────────────────────── #}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+
+</body>
+</html>

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Finance QC — {{ submission.submission_id }}{% endblock %}
+
+{% block content %}
+{% set is_actionable = submission.status in ('pending_finance_qc', 'qc_query_raised') %}
+{% set action = request.query_params.get('action') %}
+
+<div class="max-w-5xl mx-auto">
+
+  {# Header #}
+  <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+    <div>
+      <div class="flex items-center gap-3 mb-1">
+        <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ submission.submission_id }}</h1>
+        <span class="badge badge-{% if submission.status == 'pending_finance_qc' %}amber{% elif submission.status == 'qc_query_raised' %}amber{% elif submission.status == 'pending_cfo' %}green{% else %}gray{% endif %}">
+          {{ submission.status | replace('_',' ') | title }}
+        </span>
+        {% if submission.budget_over_limit_flag %}<span class="badge badge-red">Over Budget</span>{% endif %}
+      </div>
+      <p class="text-sm text-gray-500">
+        Submitted {{ submission.created_at.strftime('%d %b %Y') if submission.created_at else '—' }}
+        · HOD approved {{ submission.hod_decided_at.strftime('%d %b %Y') if submission.hod_decided_at else '—' }}
+      </p>
+    </div>
+    <a href="/finance/queue" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">← Queue</a>
+  </div>
+
+  {# Action banners #}
+  {% if action == 'approved' %}
+  <div class="mb-6 rounded-lg bg-green-50 border border-green-200 p-4 flex items-center gap-3">
+    <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <p class="text-sm font-medium text-green-800">QC cleared. Submission forwarded to CFO.</p>
+  </div>
+  {% elif action == 'query' %}
+  <div class="mb-6 rounded-lg bg-amber-50 border border-amber-200 p-4 flex items-center gap-3">
+    <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <p class="text-sm font-medium text-amber-800">Query raised. Awaiting originator response.</p>
+  </div>
+  {% elif action == 'returned' %}
+  <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 flex items-center gap-3">
+    <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+    <p class="text-sm font-medium text-red-800">Submission returned to originator for revision.</p>
+  </div>
+  {% endif %}
+
+  {# Submission meta #}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Submission Details</h2>
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div><dt class="text-xs text-gray-400">Department</dt><dd class="mt-0.5 text-sm font-medium text-gray-900">{{ submission.department }}</dd></div>
+      <div><dt class="text-xs text-gray-400">Period</dt><dd class="mt-0.5 text-sm font-medium text-gray-900">{{ submission.month_name }}</dd></div>
+      <div><dt class="text-xs text-gray-400">Cost Type</dt><dd class="mt-0.5 text-sm font-medium text-gray-900 uppercase">{{ submission.cost_type }}</dd></div>
+      <div><dt class="text-xs text-gray-400">Originator</dt><dd class="mt-0.5 text-sm font-medium text-gray-900">{{ submission.creator.display_name if submission.creator else '—' }}</dd></div>
+    </dl>
+    <div class="mt-4 pt-4 border-t border-gray-100">
+      <dt class="text-xs text-gray-400 mb-1">Supporting Justification</dt>
+      <dd class="text-sm text-gray-700 whitespace-pre-wrap">{{ submission.supporting_justification }}</dd>
+    </div>
+  </div>
+
+  {# Line items #}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Line Items</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 border-b border-gray-100">
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">#</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Vendor</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Invoice</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Category</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Description</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Original</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">USD Equiv.</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% set total_usd = namespace(value=0) %}
+          {% for item in submission.line_items %}
+          {% set total_usd.value = total_usd.value + item.equivalent_usd %}
+          <tr>
+            <td class="px-4 py-3 text-gray-400 text-xs">{{ loop.index }}</td>
+            <td class="px-4 py-3 font-medium text-gray-900">{{ item.vendor_name }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-gray-600">{{ item.invoice_no }}</td>
+            <td class="px-4 py-3 text-gray-600 text-xs">{{ item.category }}</td>
+            <td class="px-4 py-3 text-gray-700 max-w-[200px]">{{ item.description }}
+              {% if item.is_arrear %}<div class="mt-0.5"><span class="badge badge-purple text-xs">Arrear</span></div>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right font-mono text-gray-900">{{ item.currency }} {{ '{:,.2f}'.format(item.original_amount) }}</td>
+            <td class="px-4 py-3 text-right font-mono text-gray-900">USD {{ '{:,.2f}'.format(item.equivalent_usd) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="bg-gray-50 border-t-2 border-gray-200">
+            <td colspan="5" class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Total</td>
+            <td></td>
+            <td class="px-4 py-3 text-right font-mono font-bold text-gray-900">USD {{ '{:,.2f}'.format(total_usd.value) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  {# Decision panel #}
+  {% if is_actionable %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-5">QC Decision</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+      {# Clear / Approve #}
+      <div class="rounded-lg border border-green-200 bg-green-50 p-4">
+        <h3 class="text-sm font-semibold text-green-800 mb-2 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          Clear for CFO
+        </h3>
+        <p class="text-xs text-green-700 mb-3">All checks passed. Forward to CFO. Comment optional.</p>
+        <form method="POST" action="/finance/submissions/{{ submission.submission_id }}/approve">
+          <textarea name="comment" rows="2" placeholder="Optional comment…"
+                    class="w-full rounded-md border border-green-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-600 bg-white resize-none mb-3"></textarea>
+          <button type="submit" onclick="return confirm('Clear this submission for CFO?')"
+                  class="w-full rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800 transition-colors">
+            Clear
+          </button>
+        </form>
+      </div>
+
+      {# Raise Query #}
+      <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <h3 class="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Raise Query
+        </h3>
+        <p class="text-xs text-amber-700 mb-3">Hold pending clarification. Details required.</p>
+        <form method="POST" action="/finance/submissions/{{ submission.submission_id }}/query">
+          <textarea name="comment" rows="2" placeholder="Query details…" required
+                    class="w-full rounded-md border border-amber-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white resize-none mb-3"></textarea>
+          <button type="submit"
+                  class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition-colors">
+            Raise Query
+          </button>
+        </form>
+      </div>
+
+      {# Return #}
+      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+        <h3 class="text-sm font-semibold text-red-800 mb-2 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+          Return for Revision
+        </h3>
+        <p class="text-xs text-red-700 mb-3">Send back to originator. Reason required.</p>
+        <form method="POST" action="/finance/submissions/{{ submission.submission_id }}/return">
+          <textarea name="comment" rows="2" placeholder="Reason for return…" required
+                    class="w-full rounded-md border border-red-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-500 bg-white resize-none mb-3"></textarea>
+          <button type="submit" onclick="return confirm('Return this submission to the originator?')"
+                  class="w-full rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors">
+            Return
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  {% elif submission.finance_qc_status %}
+  {# Recorded QC decision #}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Finance QC Decision</h2>
+    <dl class="grid grid-cols-2 gap-4 text-sm">
+      <div><dt class="text-xs text-gray-400">Decision</dt><dd class="mt-0.5 font-medium text-gray-900 capitalize">{{ submission.finance_qc_status | replace('_',' ') }}</dd></div>
+      <div><dt class="text-xs text-gray-400">Reviewed at</dt><dd class="mt-0.5 text-gray-700">{{ submission.finance_qc_at.strftime('%d %b %Y %H:%M') if submission.finance_qc_at else '—' }}</dd></div>
+    </dl>
+    {% if submission.finance_qc_comment %}
+    <div class="mt-3 pt-3 border-t border-gray-100">
+      <dt class="text-xs text-gray-400 mb-1">Comment</dt>
+      <dd class="text-sm text-gray-700 whitespace-pre-wrap">{{ submission.finance_qc_comment }}</dd>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# Audit trail #}
+  {% if submission.audit_log %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Audit Trail</h2>
+    <ol class="relative border-l border-gray-200 ml-3 space-y-4">
+      {% for log in submission.audit_log | sort(attribute='performed_at') %}
+      <li class="ml-4">
+        <div class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full bg-gray-300 border-2 border-white"></div>
+        <div class="flex flex-wrap items-baseline gap-2">
+          <span class="text-xs font-semibold text-gray-800 uppercase">{{ log.action | replace('_',' ') }}</span>
+          <span class="text-xs text-gray-400">{{ log.performed_at.strftime('%d %b %Y %H:%M') if log.performed_at else '' }}</span>
+        </div>
+        {% if log.notes %}<p class="text-xs text-gray-600 mt-0.5">{{ log.notes }}</p>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

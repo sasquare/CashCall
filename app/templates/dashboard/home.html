@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+{# Welcome header #}
+<div class="mb-8">
+  <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem;">
+    <div style="width:3rem;height:3rem;border-radius:50%;background:linear-gradient(135deg,#003087,#0042b8);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg style="width:1.5rem;height:1.5rem;" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+      </svg>
+    </div>
+    <div>
+      <h1 style="font-size:1.5rem;font-weight:800;color:#003087;margin:0;">Welcome, {{ user.display_name }}</h1>
+      <p style="font-size:0.875rem;color:#6b7280;margin:0;">
+        <span style="font-weight:600;color:#CC0000;text-transform:capitalize;">{{ user.role | replace("_", " ") | title }}</span>
+        {% if user.department %}&nbsp;·&nbsp;{{ user.department }}{% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+{# Role-specific quick-action cards #}
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
+  {% if user.role == "originator" %}
+  <a href="/submissions/new"
+     style="display:block;border-radius:0.75rem;border:1px solid #c7d7f0;background:#fff;padding:1.5rem;box-shadow:0 1px 4px rgba(0,48,135,0.08);text-decoration:none;transition:all 0.15s;"
+     onmouseover="this.style.boxShadow='0 4px 16px rgba(0,48,135,0.15)';this.style.borderColor='#003087'"
+     onmouseout="this.style.boxShadow='0 1px 4px rgba(0,48,135,0.08)';this.style.borderColor='#c7d7f0'">
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <div style="width:3rem;height:3rem;border-radius:0.625rem;background:#e6edf8;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg style="width:1.5rem;height:1.5rem;color:#003087;" fill="none" viewBox="0 0 24 24" stroke="#003087" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+      </div>
+      <div>
+        <p style="font-weight:700;color:#003087;margin:0;">New Cash Call</p>
+        <p style="font-size:0.8rem;color:#6b7280;margin:0.25rem 0 0;">Submit a new request</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="/submissions/urgent/new"
+     style="display:block;border-radius:0.75rem;border:1px solid #fca5a5;background:#fff5f5;padding:1.5rem;box-shadow:0 1px 4px rgba(204,0,0,0.08);text-decoration:none;transition:all 0.15s;"
+     onmouseover="this.style.boxShadow='0 4px 16px rgba(204,0,0,0.15)';this.style.borderColor='#CC0000'"
+     onmouseout="this.style.boxShadow='0 1px 4px rgba(204,0,0,0.08)';this.style.borderColor='#fca5a5'">
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <div style="width:3rem;height:3rem;border-radius:0.625rem;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg style="width:1.5rem;height:1.5rem;" fill="none" viewBox="0 0 24 24" stroke="#CC0000" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+      </div>
+      <div>
+        <p style="font-weight:700;color:#CC0000;margin:0;">Urgent Request</p>
+        <p style="font-size:0.8rem;color:#6b7280;margin:0.25rem 0 0;">Time-critical submission</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="/submissions/mine"
+     style="display:block;border-radius:0.75rem;border:1px solid #c7d7f0;background:#fff;padding:1.5rem;box-shadow:0 1px 4px rgba(0,48,135,0.08);text-decoration:none;transition:all 0.15s;"
+     onmouseover="this.style.boxShadow='0 4px 16px rgba(0,48,135,0.15)';this.style.borderColor='#003087'"
+     onmouseout="this.style.boxShadow='0 1px 4px rgba(0,48,135,0.08)';this.style.borderColor='#c7d7f0'">
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <div style="width:3rem;height:3rem;border-radius:0.625rem;background:#e6edf8;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg style="width:1.5rem;height:1.5rem;" fill="none" viewBox="0 0 24 24" stroke="#003087" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+      </div>
+      <div>
+        <p style="font-weight:700;color:#003087;margin:0;">My Submissions</p>
+        <p style="font-size:0.8rem;color:#6b7280;margin:0.25rem 0 0;">Track status &amp; history</p>
+      </div>
+    </div>
+  </a>
+  {% endif %}
+
+  {% macro dash_card(href, icon_path, title, subtitle, color="#003087") %}
+  <a href="{{ href }}"
+     style="display:block;border-radius:0.75rem;border:1px solid #c7d7f0;background:#fff;padding:1.5rem;box-shadow:0 1px 4px rgba(0,48,135,0.08);text-decoration:none;transition:all 0.15s;"
+     onmouseover="this.style.boxShadow='0 4px 16px rgba(0,48,135,0.15)';this.style.borderColor='{{ color }}'"
+     onmouseout="this.style.boxShadow='0 1px 4px rgba(0,48,135,0.08)';this.style.borderColor='#c7d7f0'">
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <div style="width:3rem;height:3rem;border-radius:0.625rem;background:#e6edf8;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg style="width:1.5rem;height:1.5rem;" fill="none" viewBox="0 0 24 24" stroke="{{ color }}" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="{{ icon_path }}"/>
+        </svg>
+      </div>
+      <div>
+        <p style="font-weight:700;color:{{ color }};margin:0;">{{ title }}</p>
+        <p style="font-size:0.8rem;color:#6b7280;margin:0.25rem 0 0;">{{ subtitle }}</p>
+      </div>
+    </div>
+  </a>
+  {% endmacro %}
+
+  {% if user.role == "hod" %}
+  {{ dash_card("/hod/queue", "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", "Pending Approvals", "Review your department's requests") }}
+  {% endif %}
+
+  {% if user.role == "finance_reviewer" %}
+  {{ dash_card("/finance/queue", "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2", "Finance QC Queue", "Quality-check submitted requests") }}
+  {{ dash_card("/submissions/urgent/new", "M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z", "New Urgent Request", "Submit on behalf of any department", "#CC0000") }}
+  {% endif %}
+
+  {% if user.role == "cfo" %}
+  {{ dash_card("/cfo/queue", "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", "CFO Approval Queue", "Approve, defer, or decline requests") }}
+  {% endif %}
+
+  {% if user.role == "ceo" %}
+  {{ dash_card("/ceo/queue", "M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z", "CEO Approval Queue", "Final approval authority") }}
+  {% endif %}
+
+  {% if user.role == "treasury" %}
+  {{ dash_card("/treasury/queue", "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z", "Payment Queue", "Update payment statuses") }}
+  {% endif %}
+
+  {% if user.role == "it_admin" %}
+  {{ dash_card("/admin/users",   "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z", "User Management", "Add, deactivate, manage roles") }}
+  {{ dash_card("/admin/rates",   "M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z", "Exchange Rates", "Update FX rates") }}
+  {{ dash_card("/admin/budgets", "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z", "Budget Allocation", "Monthly budgets per department") }}
+  {{ dash_card("/admin/audit",   "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01", "Audit Log", "Full activity trail") }}
+  {% endif %}
+
+  {% if user.role in ["cfo", "ceo", "finance_reviewer", "it_admin"] %}
+  {{ dash_card("/admin/reports", "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z", "Reports &amp; KPIs", "Spending analytics by period", "#CC0000") }}
+  {% endif %}
+
+</div>
+{% endblock %}

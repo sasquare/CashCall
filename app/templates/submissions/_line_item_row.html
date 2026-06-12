@@ -1,0 +1,171 @@
+{% set i = idx %}
+<div class="li-row border border-gray-200 rounded-lg p-4 bg-gray-50 relative" id="li-row-{{ i }}">
+
+  {# Remove button (hidden on first row) #}
+  <button type="button"
+          onclick="this.closest('.li-row').remove(); recountRows();"
+          class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors"
+          title="Remove this line item">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+  </button>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+    {# Vendor Name #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Vendor Name <span class="text-red-500">*</span></label>
+      <input type="text" name="vendor_name_{{ i }}"
+             value="{{ row.get('vendor_name', '') }}"
+             required
+             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+    </div>
+
+    {# Invoice No #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Invoice No <span class="text-red-500">*</span></label>
+      <input type="text" name="invoice_no_{{ i }}"
+             value="{{ row.get('invoice_no', '') }}"
+             required
+             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+    </div>
+
+    {# PO Number #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">PO Number</label>
+      <input type="text" name="po_number_{{ i }}"
+             value="{{ row.get('po_number', '') }}"
+             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+    </div>
+
+    {# Category #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Category <span class="text-red-500">*</span></label>
+      <select name="category_{{ i }}" required
+              class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white">
+        <option value="">Select category…</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}" {% if row.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# Account Code #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Account Code <span class="text-red-500">*</span></label>
+      <input type="text" name="account_code_{{ i }}"
+             value="{{ row.get('account_code', '') }}"
+             required
+             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+    </div>
+
+    {# Frequency #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Frequency <span class="text-red-500">*</span></label>
+      <select name="frequency_{{ i }}" required
+              class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white">
+        <option value="">Select…</option>
+        {% for f in frequencies %}
+        <option value="{{ f }}" {% if row.get('frequency') == f %}selected{% endif %}>{{ f | replace('_', ' ') | title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# Currency + Amount (side by side) #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Currency <span class="text-red-500">*</span></label>
+      <select name="currency_{{ i }}" required
+              class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white">
+        {% for c in currencies %}
+        <option value="{{ c }}" {% if row.get('currency', 'USD') == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Amount <span class="text-red-500">*</span></label>
+      <input type="number" name="original_amount_{{ i }}"
+             value="{{ row.get('original_amount', '') }}"
+             min="0.01" step="0.01" required
+             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+    </div>
+
+    {# Billing Period Start #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Billing Start <span class="text-red-500">*</span></label>
+      <input type="date" name="billing_period_start_{{ i }}"
+             value="{{ row.get('billing_period_start', '') }}"
+             required
+             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+    </div>
+
+    {# Billing Period End #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Billing End <span class="text-red-500">*</span></label>
+      <input type="date" name="billing_period_end_{{ i }}"
+             value="{{ row.get('billing_period_end', '') }}"
+             required
+             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+    </div>
+
+    {# Payment Tracking Code #}
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Payment Tracking Code</label>
+      <input type="text" name="payment_tracking_code_{{ i }}"
+             value="{{ row.get('payment_tracking_code', '') }}"
+             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+    </div>
+
+  </div>{# /grid #}
+
+  {# Description (full width) #}
+  <div class="mt-4">
+    <label class="block text-xs font-medium text-gray-600 mb-1">Description <span class="text-red-500">*</span></label>
+    <textarea name="description_{{ i }}" rows="2" required
+              class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 resize-none">{{ row.get('description', '') }}</textarea>
+  </div>
+
+  {# Items / Products #}
+  <div class="mt-3">
+    <label class="block text-xs font-medium text-gray-600 mb-1">Items / Products</label>
+    <input type="text" name="items_products_{{ i }}"
+           value="{{ row.get('items_products', '') }}"
+           class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+  </div>
+
+  {# Status Remarks #}
+  <div class="mt-3">
+    <label class="block text-xs font-medium text-gray-600 mb-1">Status Remarks</label>
+    <input type="text" name="status_remarks_{{ i }}"
+           value="{{ row.get('status_remarks', '') }}"
+           class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+  </div>
+
+  {# Arrear toggle #}
+  <div class="mt-4 flex items-start gap-3">
+    <div class="flex items-center h-5 mt-0.5">
+      <input type="checkbox" id="is_arrear_{{ i }}" name="is_arrear_{{ i }}"
+             {% if row.get('is_arrear') %}checked{% endif %}
+             class="h-4 w-4 rounded border-gray-300 text-green-700 focus:ring-green-600"
+             onchange="toggleArrearType({{ i }}, this.checked)">
+    </div>
+    <div class="flex-1">
+      <label for="is_arrear_{{ i }}" class="text-sm font-medium text-gray-700 cursor-pointer">This is an arrear</label>
+      <div id="arrear_type_wrap_{{ i }}"
+           class="mt-2 {% if not row.get('is_arrear') %}hidden{% endif %}">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Arrear Type <span class="text-red-500">*</span></label>
+        <select name="arrear_type_{{ i }}"
+                class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white">
+          <option value="">Select type…</option>
+          {% for at in arrear_types %}
+          <option value="{{ at }}" {% if row.get('arrear_type') == at %}selected{% endif %}>
+            {{ at | replace('_', ' ') | title }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+</div>{# /li-row #}

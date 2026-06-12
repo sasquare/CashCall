@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Submission Confirmed — {{ submission.submission_id }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto text-center py-12">
+
+  <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5">
+    <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+  </div>
+
+  <h1 class="text-2xl font-bold text-gray-900">Submission Received</h1>
+  <p class="mt-2 text-gray-500 text-sm">
+    Your cash call has been submitted successfully and is awaiting HOD approval.
+  </p>
+
+  <div class="mt-6 bg-gray-50 rounded-xl border border-gray-200 p-5 text-left space-y-3">
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-500">Submission ID</span>
+      <span class="font-mono font-semibold text-gray-900">{{ submission.submission_id }}</span>
+    </div>
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-500">Department</span>
+      <span class="text-gray-700">{{ submission.department }}</span>
+    </div>
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-500">Period</span>
+      <span class="text-gray-700">{{ submission.month_name }}</span>
+    </div>
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-500">Cost Type</span>
+      <span class="text-gray-700 uppercase">{{ submission.cost_type }}</span>
+    </div>
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-500">Status</span>
+      <span class="badge badge-amber text-xs">Pending HOD</span>
+    </div>
+    {% if submission.budget_over_limit_flag %}
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-500">Budget Flag</span>
+      <span class="badge badge-red text-xs">Over Budget Limit</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+    <a href="/submissions/{{ submission.submission_id }}"
+       class="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+      View Submission
+    </a>
+    <a href="/submissions/new"
+       class="rounded-lg bg-green-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition-colors">
+      New Submission
+    </a>
+  </div>
+
+  <p class="mt-6 text-xs text-gray-400">
+    You will be notified once your HOD has reviewed this submission.
+  </p>
+
+</div>
+{% endblock %}

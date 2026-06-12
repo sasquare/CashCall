@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
+    <p class="mt-1 text-sm text-gray-500">Your account details and role information.</p>
+  </div>
+
+  <div class="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
+
+    {# Avatar + name header #}
+    <div class="bg-green-700 px-6 py-8 flex items-center gap-5">
+      <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+        <span class="text-white text-2xl font-bold">
+          {{ user.display_name[0] | upper }}
+        </span>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-white">{{ user.display_name }}</h2>
+        <p class="text-green-200 text-sm mt-0.5">{{ user.email }}</p>
+      </div>
+    </div>
+
+    {# Details grid #}
+    <dl class="divide-y divide-gray-100">
+
+      <div class="px-6 py-4 flex justify-between items-center">
+        <dt class="text-sm font-medium text-gray-500 w-40">Role</dt>
+        <dd class="text-sm text-gray-900 font-medium capitalize">
+          {{ user.role | replace("_", " ") }}
+        </dd>
+      </div>
+
+      <div class="px-6 py-4 flex justify-between items-center">
+        <dt class="text-sm font-medium text-gray-500 w-40">Department</dt>
+        <dd class="text-sm text-gray-900">
+          {% if user.department %}
+            {{ user.department }}
+          {% else %}
+            <span class="text-gray-400 italic">Not assigned (global role)</span>
+          {% endif %}
+        </dd>
+      </div>
+
+      <div class="px-6 py-4 flex justify-between items-center">
+        <dt class="text-sm font-medium text-gray-500 w-40">Account status</dt>
+        <dd>
+          {% if user.is_active %}
+            <span class="badge-green">Active</span>
+          {% else %}
+            <span class="badge-red">Inactive</span>
+          {% endif %}
+        </dd>
+      </div>
+
+      {% if user.alternate_email %}
+      <div class="px-6 py-4 flex justify-between items-center">
+        <dt class="text-sm font-medium text-gray-500 w-40">Delegate email</dt>
+        <dd class="text-sm text-gray-900">{{ user.alternate_email }}</dd>
+      </div>
+      {% endif %}
+
+      <div class="px-6 py-4 flex justify-between items-center">
+        <dt class="text-sm font-medium text-gray-500 w-40">Member since</dt>
+        <dd class="text-sm text-gray-900">
+          {{ user.created_at.strftime("%d %b %Y") if user.created_at else "—" }}
+        </dd>
+      </div>
+
+    </dl>
+
+    {# Actions #}
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+      <a href="/dashboard" class="text-sm text-green-700 hover:text-green-900 font-medium">
+        &larr; Back to dashboard
+      </a>
+      <a href="/logout"
+         class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium
+                text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
+        Sign out
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
