@@ -30,12 +30,14 @@ async def login_page(request: Request):
     # Already logged in → dashboard
     if request.session.get("user"):
         return RedirectResponse("/dashboard", status_code=status.HTTP_302_FOUND)
+    azure_configured = bool(settings.AZURE_CLIENT_ID)
     return templates.TemplateResponse(
         "auth/login.html",
         {
             "request": request,
             "dev_mode": settings.is_development and settings.DEV_BYPASS_ENABLED,
-            "azure_configured": bool(settings.AZURE_CLIENT_ID),
+            "show_password_form": not azure_configured or (settings.is_development and settings.DEV_BYPASS_ENABLED),
+            "azure_configured": azure_configured,
             "error": request.query_params.get("error"),
         },
     )
@@ -52,7 +54,9 @@ async def login_dev(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    if not settings.is_development or not settings.DEV_BYPASS_ENABLED:
+    azure_configured = bool(settings.AZURE_CLIENT_ID)
+    # Allow password login whenever Azure SSO is not configured, or in dev mode
+    if azure_configured and not (settings.is_development and settings.DEV_BYPASS_ENABLED):
         return RedirectResponse("/login?error=dev_disabled", status_code=status.HTTP_302_FOUND)
 
     user = authenticate_dev(email, password, db)
@@ -61,8 +65,9 @@ async def login_dev(
             "auth/login.html",
             {
                 "request": request,
-                "dev_mode": True,
-                "azure_configured": bool(settings.AZURE_CLIENT_ID),
+                "dev_mode": settings.is_development and settings.DEV_BYPASS_ENABLED,
+                "show_password_form": not azure_configured or (settings.is_development and settings.DEV_BYPASS_ENABLED),
+                "azure_configured": azure_configured,
                 "error": "Invalid email or password.",
                 "prefill_email": email,
             },

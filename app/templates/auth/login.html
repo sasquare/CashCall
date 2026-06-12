@@ -61,7 +61,7 @@
       <h1 style="color:#fff;font-size:2rem;font-weight:800;margin:0 0 0.5rem;letter-spacing:-0.02em;">DPRP Cash Call</h1>
       <p style="color:#7fa8d8;font-size:1rem;margin:0 0 3rem;">Dangote Petroleum Refinery &amp; Petrochemicals FZE</p>
       <div style="display:flex;flex-direction:column;gap:1.25rem;text-align:left;">
-        {% for label in ["5-stage digital approval workflow","Real-time submission tracking","Multi-currency support (USD, NGN, EUR, GBP, INR)","Full audit trail &amp; reporting"] %}
+        {% for label in ["5-stage digital approval workflow","Real-time submission tracking","Multi-currency support (USD, NGN, EUR, GBP, INR)","Full audit trail & reporting"] %}
         <div style="display:flex;align-items:center;gap:0.875rem;">
           <div style="width:2rem;height:2rem;border-radius:50%;background:rgba(204,0,0,0.25);border:1px solid rgba(204,0,0,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg style="width:1rem;height:1rem;color:#ff8080;" fill="none" viewBox="0 0 24 24" stroke="#ff9999" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -126,12 +126,12 @@
       </div>
       {% endif %}
 
-      {# Dev bypass #}
-      {% if dev_mode %}
+      {# Password login form — shown when Azure SSO not configured or in dev mode #}
+      {% if show_password_form %}
       <div style="position:relative;margin-bottom:1.25rem;">
         <div style="position:absolute;inset:0;display:flex;align-items:center;"><div style="width:100%;border-top:1px solid #e5e7eb;"></div></div>
         <div style="position:relative;display:flex;justify-content:center;">
-          <span style="background:#fff;padding:0 0.75rem;font-size:0.8rem;color:#d97706;font-weight:600;">Dev login</span>
+          <span style="background:#fff;padding:0 0.75rem;font-size:0.8rem;color:{% if dev_mode %}#d97706{% else %}#6b7280{% endif %};font-weight:600;">{% if dev_mode %}Dev login{% else %}Sign in with email{% endif %}</span>
         </div>
       </div>
 
@@ -153,6 +153,7 @@
         </button>
       </form>
 
+      {% if dev_mode %}
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:0.5rem;padding:0.875rem;margin-top:1.25rem;">
         <p style="font-size:0.75rem;font-weight:700;color:#92400e;margin:0 0 0.5rem;">Development Credentials</p>
         <div style="font-size:0.72rem;font-family:monospace;color:#b45309;display:flex;flex-direction:column;gap:0.2rem;">
@@ -165,6 +166,7 @@
           <div>it.admin@dangote.com / ITAdmin@123</div>
         </div>
       </div>
+      {% endif %}
       {% endif %}
 
       <p style="text-align:center;font-size:0.75rem;color:#9ca3af;margin-top:1.5rem;">
