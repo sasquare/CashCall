@@ -52,6 +52,44 @@
     </table>
   </div>
 
+  {# System Audit Log (rates, budgets, user changes) #}
+  {% if system_logs %}
+  <div class="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden mb-4 mt-8">
+    <div class="px-6 py-3 border-b border-blue-100 bg-blue-50">
+      <h2 class="text-sm font-semibold text-blue-800 uppercase tracking-wide">System Changes — Rates &amp; Budgets</h2>
+      <p class="text-xs text-blue-600 mt-0.5">Last 50 changes to exchange rates, budgets, or user accounts</p>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-50 border-b border-gray-100">
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Timestamp</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Event</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Changed By</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Old Value</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">New Value</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Notes</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for log in system_logs %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+            {{ log.performed_at.strftime('%d %b %Y %H:%M') if log.performed_at else '—' }}
+          </td>
+          <td class="px-4 py-2.5 text-xs font-semibold text-blue-700 uppercase whitespace-nowrap">
+            {{ log.event_type | replace('_', ' ') }}
+          </td>
+          <td class="px-4 py-2.5 text-xs text-gray-600">{{ log.performer.display_name if log.performer else '—' }}</td>
+          <td class="px-4 py-2.5 text-xs text-red-600 font-mono">{{ log.old_value or '—' }}</td>
+          <td class="px-4 py-2.5 text-xs text-green-700 font-mono">{{ log.new_value or '—' }}</td>
+          <td class="px-4 py-2.5 text-xs text-gray-500 max-w-[220px] truncate" title="{{ log.notes }}">{{ log.notes or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
   {# Pagination #}
   {% if pages > 1 %}
   <div class="flex items-center justify-between">

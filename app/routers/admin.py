@@ -43,6 +43,7 @@ from app.models.audit_log import AuditLog
 from app.models.category_budget import CategoryBudget
 from app.models.exchange_rate import ExchangeRate
 from app.models.submission import Submission
+from app.models.system_audit_log import SystemAuditLog
 from app.models.user import User
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -304,14 +305,41 @@ async def add_rate(
             today=today, errors=errors, form_data=form,
         ), status_code=422)
 
-    db.add(ExchangeRate(
+    source = form.get("source", "").strip() or "Manual entry"
+
+    # Expire the current active rate for this currency (set valid_until to yesterday)
+    today = date.today()
+    existing = db.query(ExchangeRate).filter(
+        ExchangeRate.currency == currency,
+        ExchangeRate.effective_from <= today,
+        ExchangeRate.valid_until == None,  # noqa: E711
+    ).order_by(ExchangeRate.effective_from.desc()).first()
+
+    old_rate_str = None
+    if existing:
+        from datetime import timedelta
+        existing.valid_until = eff_from - timedelta(days=1)
+        old_rate_str = f"{existing.rate_to_usd} (from {existing.effective_from})"
+
+    new_rate = ExchangeRate(
         currency=currency,
         rate_to_usd=rate_val,
         effective_from=eff_from,
         valid_until=None,
         updated_by=current_user.id,
-        source=form.get("source", "").strip() or "Manual entry",
+        source=source,
+    )
+    db.add(new_rate)
+
+    # Write system audit log entry
+    db.add(SystemAuditLog(
+        event_type="exchange_rate_updated",
+        performed_by=current_user.id,
+        old_value=old_rate_str,
+        new_value=f"{rate_val} (from {eff_from})",
+        notes=f"{currency} rate updated. Source: {source}",
     ))
+
     db.commit()
     return RedirectResponse(url="/admin/rates?added=1", status_code=303)
 
@@ -419,10 +447,19 @@ async def audit_log(
         .limit(PAGE_SIZE)
         .all()
     )
+
+    system_logs = (
+        db.query(SystemAuditLog)
+        .order_by(SystemAuditLog.performed_at.desc())
+        .limit(50)
+        .all()
+    )
+
     tmpl = _templates(request)
     return tmpl.TemplateResponse("admin/audit.html", _ctx(
         request, user=current_user,
         logs=logs, page=page, pages=pages, total=total,
+        system_logs=system_logs,
     ))
 
 
