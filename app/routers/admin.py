@@ -244,7 +244,7 @@ def _validate_user_form(form: dict, db: Session, editing_id: int | None) -> list
 @router.get("/rates", response_class=HTMLResponse)
 async def rates_list(
     request: Request,
-    current_user: User = Depends(require_role("it_admin")),
+    current_user: User = Depends(require_role("it_admin", "finance_reviewer", "cfo")),
     db: Session = Depends(get_db),
 ):
     rates = (
@@ -270,7 +270,7 @@ async def rates_list(
 @router.post("/rates", response_class=HTMLResponse)
 async def add_rate(
     request: Request,
-    current_user: User = Depends(require_role("it_admin")),
+    current_user: User = Depends(require_role("it_admin", "finance_reviewer", "cfo")),
     db: Session = Depends(get_db),
 ):
     form = dict(await request.form())
@@ -323,7 +323,7 @@ async def add_rate(
 @router.get("/budgets", response_class=HTMLResponse)
 async def budgets_list(
     request: Request,
-    current_user: User = Depends(require_role("it_admin")),
+    current_user: User = Depends(require_role("it_admin", "finance_reviewer", "cfo")),
     db: Session = Depends(get_db),
 ):
     today = date.today()
@@ -352,7 +352,7 @@ async def budgets_list(
 @router.post("/budgets", response_class=HTMLResponse)
 async def upsert_budget(
     request: Request,
-    current_user: User = Depends(require_role("it_admin")),
+    current_user: User = Depends(require_role("it_admin", "finance_reviewer", "cfo")),
     db: Session = Depends(get_db),
 ):
     form = dict(await request.form())
@@ -404,7 +404,7 @@ async def upsert_budget(
 @router.get("/audit", response_class=HTMLResponse)
 async def audit_log(
     request: Request,
-    current_user: User = Depends(require_role("it_admin")),
+    current_user: User = Depends(require_role("it_admin", "finance_reviewer", "cfo")),
     db: Session = Depends(get_db),
 ):
     page = max(1, int(request.query_params.get("page", 1)))
