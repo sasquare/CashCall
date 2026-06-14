@@ -1,4 +1,6 @@
-function SuccessMessage({ orderData, onNewOrder }) {
+function SuccessMessage({ orderData, orderId, onNewOrder }) {
+  const orderRef = `#${orderId.substring(0, 8).toUpperCase()}`
+
   return (
     <div className="text-center py-4">
 
@@ -20,21 +22,31 @@ function SuccessMessage({ orderData, onNewOrder }) {
         Order Received!
       </h2>
 
-      <p className="text-gray-500 text-sm mb-6 leading-relaxed max-w-sm mx-auto">
+      <p className="text-gray-500 text-sm mb-5 leading-relaxed max-w-sm mx-auto">
         Thank you, <span className="font-semibold text-brand-purple">{orderData.fullName}</span>!
-        Your bespoke fragrance order is in. We'll reach out to you at{' '}
-        <span className="font-medium text-brand-purple-light break-all">{orderData.contactInfo}</span> soon.
+        Your bespoke fragrance order is confirmed. We'll reach out to you at{' '}
+        <span className="font-medium text-brand-purple break-all">{orderData.contactInfo}</span> soon.
       </p>
 
-      {/* Order summary card */}
+      {/* Order Reference */}
+      <div
+        className="rounded-xl p-4 mb-6"
+        style={{ background: 'linear-gradient(135deg, #1E0437, #3B0764)' }}
+      >
+        <p className="text-purple-300 text-xs uppercase tracking-[0.2em] mb-2">Your Order Reference</p>
+        <p className="text-brand-gold text-3xl font-bold tracking-widest" style={{ fontFamily: 'monospace' }}>
+          {orderRef}
+        </p>
+        <p className="text-purple-300 text-xs mt-2">Screenshot this number for your records</p>
+      </div>
+
+      {/* Order summary */}
       <div className="rounded-xl border border-purple-100 bg-purple-50 p-5 mb-6 text-left">
-        <p
-          className="text-xs font-bold text-brand-purple tracking-[0.2em] uppercase mb-4 text-center"
-        >
+        <p className="text-xs font-bold text-brand-purple tracking-[0.2em] uppercase mb-4 text-center">
           ✦ Order Summary ✦
         </p>
 
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           <SummaryRow label="Perfume Type" value={orderData.perfumeType} />
           <SummaryRow label="Base" value={orderData.baseType} />
           <SummaryRow label="Quantity" value={orderData.quantity} />
@@ -61,7 +73,7 @@ function SuccessMessage({ orderData, onNewOrder }) {
       </button>
 
       <p className="text-xs text-gray-400 mt-4">
-        Questions? WhatsApp Maria directly with your order reference.
+        Quote your order reference when contacting us on WhatsApp.
       </p>
     </div>
   )

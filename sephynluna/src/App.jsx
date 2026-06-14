@@ -4,15 +4,15 @@ import SuccessMessage from './components/SuccessMessage'
 import './App.css'
 
 function App() {
-  const [orderData, setOrderData] = useState(null)
+  const [submission, setSubmission] = useState(null) // { orderData, orderId }
 
-  const handleSuccess = (data) => {
-    setOrderData(data)
+  const handleSuccess = (orderData, orderId) => {
+    setSubmission({ orderData, orderId })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleNewOrder = () => {
-    setOrderData(null)
+    setSubmission(null)
   }
 
   return (
@@ -59,8 +59,12 @@ function App() {
             <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #3B0764, #D4AF37, #3B0764)' }} />
 
             <div className="p-6 md:p-10">
-              {orderData ? (
-                <SuccessMessage orderData={orderData} onNewOrder={handleNewOrder} />
+              {submission ? (
+                <SuccessMessage
+                  orderData={submission.orderData}
+                  orderId={submission.orderId}
+                  onNewOrder={handleNewOrder}
+                />
               ) : (
                 <>
                   <div className="text-center mb-8">

@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import emailjs from '@emailjs/browser'
+import { db } from '../firebase'
 
 const INITIAL_FORM = {
   fullName: '',
@@ -60,18 +63,59 @@ function RadioCard({ name, value, selected, onChange, label, description }) {
   )
 }
 
+async function saveOrderToFirestore(form) {
+  const ref = await addDoc(collection(db, 'orders'), {
+    fullName:               form.fullName,
+    contactInfo:            form.contactInfo,
+    perfumeType:            form.perfumeType,
+    baseType:               form.baseType,
+    scentNotes:             form.scentNotes,
+    quantity:               Number(form.quantity),
+    additionalInstructions: form.additionalInstructions,
+    status:                 'pending',
+    createdAt:              serverTimestamp(),
+  })
+  return ref.id
+}
+
+async function sendOwnerEmail(form, orderId) {
+  const orderRef = `#${orderId.substring(0, 8).toUpperCase()}`
+  const orderDate = new Date().toLocaleString('en-NG', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+
+  await emailjs.send(
+    import.meta.env.VITE_EMAILJS_SERVICE_ID,
+    import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+    {
+      order_id:      orderRef,
+      customer_name: form.fullName,
+      contact_info:  form.contactInfo,
+      perfume_type:  form.perfumeType,
+      base_type:     form.baseType,
+      scent_notes:   form.scentNotes,
+      quantity:      form.quantity,
+      instructions:  form.additionalInstructions || 'None',
+      order_date:    orderDate,
+    },
+    import.meta.env.VITE_EMAILJS_PUBLIC_KEY,
+  )
+}
+
 function OrderForm({ onSuccess }) {
   const [form, setForm] = useState(INITIAL_FORM)
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const validate = () => {
     const e = {}
-    if (!form.fullName.trim())     e.fullName    = 'Please enter your full name'
-    if (!form.contactInfo.trim())  e.contactInfo = 'Please enter your WhatsApp number or email'
-    if (!form.perfumeType)         e.perfumeType = 'Please select a perfume type'
-    if (!form.baseType)            e.baseType    = 'Please select a base type'
-    if (!form.scentNotes.trim())   e.scentNotes  = 'Please describe your preferred scent or notes'
+    if (!form.fullName.trim())    e.fullName    = 'Please enter your full name'
+    if (!form.contactInfo.trim()) e.contactInfo = 'Please enter your WhatsApp number or email'
+    if (!form.perfumeType)        e.perfumeType = 'Please select a perfume type'
+    if (!form.baseType)           e.baseType    = 'Please select a base type'
+    if (!form.scentNotes.trim())  e.scentNotes  = 'Please describe your preferred scent or notes'
     if (!form.quantity || Number(form.quantity) < 1) e.quantity = 'Quantity must be at least 1'
     return e
   }
@@ -80,29 +124,48 @@ function OrderForm({ onSuccess }) {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
+    if (submitError)  setSubmitError('')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const found = validate()
     if (Object.keys(found).length > 0) {
       setErrors(found)
-      const firstErrorField = document.querySelector('[data-error="true"]')
-      firstErrorField?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
+
     setIsSubmitting(true)
-    setTimeout(() => {
+    setSubmitError('')
+
+    try {
+      // 1. Save order to Firestore
+      const orderId = await saveOrderToFirestore(form)
+
+      // 2. Notify owner by email (non-blocking — order succeeds even if email fails)
+      sendOwnerEmail(form, orderId).catch((err) => {
+        console.warn('Owner email notification failed:', err)
+      })
+
+      // 3. Show success screen
+      onSuccess(form, orderId)
+
+    } catch (err) {
+      console.error('Order submission error:', err)
+      setSubmitError(
+        'We couldn\'t place your order right now. Please check your internet connection and try again, ' +
+        'or contact us directly on WhatsApp.'
+      )
+    } finally {
       setIsSubmitting(false)
-      onSuccess(form)
-    }, 1400)
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
 
       {/* Full Name */}
-      <div data-error={!!errors.fullName}>
+      <div>
         <Label htmlFor="fullName">Customer Full Name</Label>
         <input
           id="fullName"
@@ -117,7 +180,7 @@ function OrderForm({ onSuccess }) {
       </div>
 
       {/* Contact Info */}
-      <div data-error={!!errors.contactInfo}>
+      <div>
         <Label htmlFor="contactInfo">WhatsApp Number or Email</Label>
         <input
           id="contactInfo"
@@ -132,55 +195,35 @@ function OrderForm({ onSuccess }) {
       </div>
 
       {/* Perfume Type */}
-      <div data-error={!!errors.perfumeType}>
+      <div>
         <Label>Perfume Type</Label>
         <div className="grid grid-cols-2 gap-3">
-          <RadioCard
-            name="perfumeType"
-            value="Brand Perfume"
-            selected={form.perfumeType === 'Brand Perfume'}
-            onChange={handleChange}
-            label="Brand Perfume"
-            description="🏷️"
-          />
-          <RadioCard
-            name="perfumeType"
-            value="Custom Blend"
-            selected={form.perfumeType === 'Custom Blend'}
-            onChange={handleChange}
-            label="Custom Blend"
-            description="🌸"
-          />
+          <RadioCard name="perfumeType" value="Brand Perfume"
+            selected={form.perfumeType === 'Brand Perfume'} onChange={handleChange}
+            label="Brand Perfume" description="🏷️" />
+          <RadioCard name="perfumeType" value="Custom Blend"
+            selected={form.perfumeType === 'Custom Blend'} onChange={handleChange}
+            label="Custom Blend" description="🌸" />
         </div>
         <FieldError msg={errors.perfumeType} />
       </div>
 
       {/* Base Type */}
-      <div data-error={!!errors.baseType}>
+      <div>
         <Label>Base Type</Label>
         <div className="grid grid-cols-2 gap-3">
-          <RadioCard
-            name="baseType"
-            value="Oil Based"
-            selected={form.baseType === 'Oil Based'}
-            onChange={handleChange}
-            label="Oil Based"
-            description="💧"
-          />
-          <RadioCard
-            name="baseType"
-            value="Alcohol Based"
-            selected={form.baseType === 'Alcohol Based'}
-            onChange={handleChange}
-            label="Alcohol Based"
-            description="✨"
-          />
+          <RadioCard name="baseType" value="Oil Based"
+            selected={form.baseType === 'Oil Based'} onChange={handleChange}
+            label="Oil Based" description="💧" />
+          <RadioCard name="baseType" value="Alcohol Based"
+            selected={form.baseType === 'Alcohol Based'} onChange={handleChange}
+            label="Alcohol Based" description="✨" />
         </div>
         <FieldError msg={errors.baseType} />
       </div>
 
       {/* Scent Notes */}
-      <div data-error={!!errors.scentNotes}>
+      <div>
         <Label htmlFor="scentNotes">Preferred Scent / Notes</Label>
         <textarea
           id="scentNotes"
@@ -195,7 +238,7 @@ function OrderForm({ onSuccess }) {
       </div>
 
       {/* Quantity */}
-      <div data-error={!!errors.quantity}>
+      <div>
         <Label htmlFor="quantity">Quantity</Label>
         <input
           id="quantity"
@@ -224,6 +267,14 @@ function OrderForm({ onSuccess }) {
           className={`${inputBase} resize-none ${inputValid}`}
         />
       </div>
+
+      {/* Submission error */}
+      {submitError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm flex gap-3">
+          <span className="text-xl">⚠️</span>
+          <span>{submitError}</span>
+        </div>
+      )}
 
       {/* Divider */}
       <div className="flex items-center gap-3 py-1">
