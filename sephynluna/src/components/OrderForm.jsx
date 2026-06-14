@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import emailjs from '@emailjs/browser'
-import { db } from '../firebase'
+import { db, isFirebaseReady } from '../firebase'
 
 const INITIAL_FORM = {
   fullName: '',
@@ -64,6 +64,10 @@ function RadioCard({ name, value, selected, onChange, label, description }) {
 }
 
 async function saveOrderToFirestore(form) {
+  if (!isFirebaseReady) {
+    // Demo mode — simulate a Firestore document ID so the UI still works
+    return `demo${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+  }
   const ref = await addDoc(collection(db, 'orders'), {
     fullName:               form.fullName,
     contactInfo:            form.contactInfo,
@@ -79,6 +83,9 @@ async function saveOrderToFirestore(form) {
 }
 
 async function sendOwnerEmail(form, orderId) {
+  // Skip silently if EmailJS is not configured yet
+  if (!import.meta.env.VITE_EMAILJS_SERVICE_ID) return
+
   const orderRef = `#${orderId.substring(0, 8).toUpperCase()}`
   const orderDate = new Date().toLocaleString('en-NG', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -312,6 +319,15 @@ function OrderForm({ onSuccess }) {
       <p className="text-center text-gray-400 text-xs">
         Fields marked with <span className="text-brand-gold font-bold">✦</span> are required
       </p>
+
+      {!isFirebaseReady && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+          <p className="text-amber-700 text-xs font-medium">
+            🔧 Demo Mode — orders are not saved yet.
+            Add your Firebase credentials in <code className="bg-amber-100 px-1 rounded">.env</code> to go live.
+          </p>
+        </div>
+      )}
     </form>
   )
 }

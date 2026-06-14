@@ -10,5 +10,9 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const app = initializeApp(firebaseConfig)
-export const db = getFirestore(app)
+// True only when real Firebase keys have been provided
+export const isFirebaseReady = Boolean(import.meta.env.VITE_FIREBASE_PROJECT_ID)
+
+export const db = isFirebaseReady
+  ? getFirestore(initializeApp(firebaseConfig))
+  : null

@@ -1,5 +1,8 @@
 function SuccessMessage({ orderData, orderId, onNewOrder }) {
-  const orderRef = `#${orderId.substring(0, 8).toUpperCase()}`
+  const isDemoOrder = orderId.startsWith('demo')
+  const orderRef = isDemoOrder
+    ? '#DEMO-MODE'
+    : `#${orderId.substring(0, 8).toUpperCase()}`
 
   return (
     <div className="text-center py-4">
@@ -72,9 +75,16 @@ function SuccessMessage({ orderData, orderId, onNewOrder }) {
         Place Another Order
       </button>
 
-      <p className="text-xs text-gray-400 mt-4">
-        Quote your order reference when contacting us on WhatsApp.
-      </p>
+      {isDemoOrder ? (
+        <p className="text-xs text-amber-600 mt-4 bg-amber-50 rounded-lg p-3">
+          🔧 This was a <strong>demo submission</strong> — nothing was saved.
+          Add your Firebase credentials to go live.
+        </p>
+      ) : (
+        <p className="text-xs text-gray-400 mt-4">
+          Quote your order reference when contacting us on WhatsApp.
+        </p>
+      )}
     </div>
   )
 }
