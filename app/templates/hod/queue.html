@@ -36,7 +36,7 @@
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ID</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Type</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Items</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Items Pending</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Submitted</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Flag</th>
           <th class="px-4 py-3"></th>
@@ -51,7 +51,7 @@
           </td>
           <td class="px-4 py-3 text-gray-700">{{ sub.month_name }}</td>
           <td class="px-4 py-3"><span class="text-xs font-medium uppercase text-gray-500">{{ sub.cost_type }}</span></td>
-          <td class="px-4 py-3 text-right text-gray-600">{{ sub.line_items | length }}</td>
+          <td class="px-4 py-3 text-right text-gray-600">{{ pending_counts.get(sub.id, 0) }} / {{ sub.line_items | length }}</td>
           <td class="px-4 py-3 text-gray-500 text-xs">{{ sub.created_at.strftime('%d %b %Y') }}</td>
           <td class="px-4 py-3">
             {% if sub.budget_over_limit_flag %}<span class="badge badge-red text-xs">Over Budget</span>{% endif %}
@@ -72,38 +72,38 @@
     {% endif %}
   </div>
 
-  {# Recently Reviewed #}
-  {% if reviewed %}
+  {# Recently Reviewed — individual items #}
+  {% if recent_items %}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-100">
-      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Recently Reviewed</h2>
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Recently Reviewed Items</h2>
     </div>
     <table class="w-full text-sm">
       <thead>
         <tr class="bg-gray-50 border-b border-gray-100">
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ID</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Submission</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Vendor</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Decision</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Decided</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-50">
-        {% set badge_map = {'approved':'green','returned':'amber','declined':'red'} %}
-        {% for sub in reviewed %}
+        {% set badge_map = {'approved':'green','rejected':'red'} %}
+        {% for li in recent_items %}
         <tr class="hover:bg-gray-50 transition-colors">
-          <td class="px-4 py-3 font-mono text-gray-700">{{ sub.submission_id }}</td>
-          <td class="px-4 py-3 text-gray-600">{{ sub.month_name }}</td>
+          <td class="px-4 py-3 font-mono text-gray-700">{{ li.submission.submission_id }}</td>
+          <td class="px-4 py-3 text-gray-700">{{ li.vendor_name }}</td>
           <td class="px-4 py-3">
-            <span class="badge badge-{{ badge_map.get(sub.hod_decision, 'gray') }} text-xs">
-              {{ sub.hod_decision | title if sub.hod_decision else '—' }}
+            <span class="badge badge-{{ badge_map.get(li.hod_decision, 'gray') }} text-xs">
+              {{ li.hod_decision | title if li.hod_decision else '—' }}
             </span>
           </td>
           <td class="px-4 py-3 text-gray-500 text-xs">
-            {{ sub.hod_decided_at.strftime('%d %b %Y') if sub.hod_decided_at else '—' }}
+            {{ li.hod_decided_at.strftime('%d %b %Y') if li.hod_decided_at else '—' }}
           </td>
           <td class="px-4 py-3 text-right">
-            <a href="/hod/submissions/{{ sub.submission_id }}" class="text-green-700 hover:text-green-900 text-xs font-medium">View →</a>
+            <a href="/hod/submissions/{{ li.submission.submission_id }}" class="text-green-700 hover:text-green-900 text-xs font-medium">View →</a>
           </td>
         </tr>
         {% endfor %}

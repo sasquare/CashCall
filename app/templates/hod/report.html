@@ -26,27 +26,28 @@
     </form>
   </div>
 
-  {# KPI Summary Cards #}
+  {# KPI Summary Cards — counted per LINE ITEM, since items now move independently #}
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Submissions</p>
-      <p class="text-3xl font-bold text-gray-900">{{ total }}</p>
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Submissions</p>
+      <p class="text-3xl font-bold text-gray-900">{{ total_submissions }}</p>
+      <p class="text-xs text-gray-400 mt-1">{{ total }} line item(s)</p>
     </div>
 
     <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4 text-center">
-      <p class="text-xs text-green-600 uppercase tracking-wide mb-1">Approved</p>
+      <p class="text-xs text-green-600 uppercase tracking-wide mb-1">Items Approved</p>
       <p class="text-3xl font-bold text-green-700">{{ approved }}</p>
     </div>
 
     <div class="bg-white rounded-xl border border-amber-200 shadow-sm p-4 text-center">
-      <p class="text-xs text-amber-600 uppercase tracking-wide mb-1">Returned</p>
-      <p class="text-3xl font-bold text-amber-600">{{ returned }}</p>
+      <p class="text-xs text-amber-600 uppercase tracking-wide mb-1">Items Pending</p>
+      <p class="text-3xl font-bold text-amber-600">{{ pending }}</p>
     </div>
 
     <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4 text-center">
-      <p class="text-xs text-red-500 uppercase tracking-wide mb-1">Declined</p>
-      <p class="text-3xl font-bold text-red-600">{{ declined }}</p>
+      <p class="text-xs text-red-500 uppercase tracking-wide mb-1">Items Rejected</p>
+      <p class="text-3xl font-bold text-red-600">{{ rejected }}</p>
     </div>
 
   </div>

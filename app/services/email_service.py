@@ -41,26 +41,13 @@ def send_email(to: str, subject: str, body_html: str) -> None:
 # Notification helpers
 # ---------------------------------------------------------------------------
 
-def notify_hod_returned(originator_email: str, submission_id: str, comment: str) -> None:
-    send_email(
-        to=originator_email,
-        subject=f"[Cash Call] Submission {submission_id} Returned for Revision",
-        body_html=f"""
-        <p>Your cash call submission <strong>{submission_id}</strong> has been
-        <strong>returned for revision</strong> by your HOD.</p>
-        <p><strong>HOD Comment:</strong><br>{comment}</p>
-        <p>Please log in to review the feedback and resubmit.</p>
-        """,
-    )
-
-
 def notify_hod_declined(originator_email: str, submission_id: str, comment: str) -> None:
     send_email(
         to=originator_email,
-        subject=f"[Cash Call] Submission {submission_id} Declined by HOD",
+        subject=f"[Cash Call] Submission {submission_id} — Item(s) Rejected by HOD",
         body_html=f"""
-        <p>Your cash call submission <strong>{submission_id}</strong> has been
-        <strong>declined</strong> by your HOD.</p>
+        <p>One or more line item(s) on your cash call submission <strong>{submission_id}</strong>
+        have been <strong>rejected</strong> by your HOD.</p>
         <p><strong>Reason:</strong><br>{comment}</p>
         <p>Please log in for more details.</p>
         """,

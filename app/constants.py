@@ -313,19 +313,24 @@ USER_ROLES: list[str] = [
 
 SUBMISSION_STATUSES: list[str] = [
     "pending_hod",
-    "hod_returned",
-    "hod_declined",
+    "hod_rejected",
     "pending_finance_qc",
     "qc_query_raised",
-    "returned_for_revision",
+    "finance_rejected",
     "pending_cfo",
-    "declined_by_cfo",
+    "cfo_rejected",
     "deferred_by_cfo",
     "pending_ceo",
-    "declined_by_ceo",
+    "ceo_rejected",
     "pending_treasury_payment",
     "paid",
 ]
+
+# Same vocabulary as above — LineItem.status uses these directly since each
+# item now moves through the approval chain independently. "mixed" is a
+# Submission-only rollup value (see submission_service.recompute_submission_status)
+# and is never set on a LineItem.
+LINE_ITEM_STATUSES: list[str] = SUBMISSION_STATUSES
 
 TREASURY_PAYMENT_STATUSES: list[str] = [
     "paid",
@@ -369,18 +374,18 @@ URGENCY_CATEGORIES: list[str] = [
 # Status → badge colour mapping (used in templates)
 STATUS_BADGE_COLOURS: dict[str, str] = {
     "pending_hod": "amber",
-    "hod_returned": "purple",
-    "hod_declined": "red",
+    "hod_rejected": "red",
     "pending_finance_qc": "amber",
     "qc_query_raised": "purple",
-    "returned_for_revision": "purple",
+    "finance_rejected": "red",
     "pending_cfo": "amber",
-    "declined_by_cfo": "red",
+    "cfo_rejected": "red",
     "deferred_by_cfo": "gray",
     "pending_ceo": "amber",
-    "declined_by_ceo": "red",
+    "ceo_rejected": "red",
     "pending_treasury_payment": "amber",
     "paid": "green",
+    "mixed": "blue",
 }
 
 MONTH_NAMES: dict[int, str] = {

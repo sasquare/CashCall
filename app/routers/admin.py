@@ -485,10 +485,13 @@ async def reports(
         .all()
     )
 
-    # Status breakdown
+    # Status breakdown — counted per LINE ITEM, since items now move through
+    # the approval chain independently and a submission's own status is
+    # frequently just "mixed".
     status_counts: dict[str, int] = {}
     for sub in period_subs:
-        status_counts[sub.status] = status_counts.get(sub.status, 0) + 1
+        for li in sub.line_items:
+            status_counts[li.status] = status_counts.get(li.status, 0) + 1
 
     # By department — total USD requested, status
     dept_totals: dict[str, dict] = {}
@@ -497,13 +500,14 @@ async def reports(
         if d not in dept_totals:
             dept_totals[d] = {"count": 0, "total_usd": 0.0, "paid": 0.0, "pending": 0, "urgent": 0}
         dept_totals[d]["count"] += 1
-        active_usd = float(sum(li.equivalent_usd for li in sub.line_items if not li.cfo_deferred))
-        dept_totals[d]["total_usd"] += active_usd
-        if sub.status == "paid":
-            dept_totals[d]["paid"] += float(active_usd)
-        elif sub.status in ("pending_hod", "pending_finance_qc", "qc_query_raised",
-                            "pending_cfo", "pending_ceo", "pending_treasury_payment"):
-            dept_totals[d]["pending"] += 1
+        active_items = [li for li in sub.line_items if not li.cfo_deferred]
+        dept_totals[d]["total_usd"] += float(sum(li.equivalent_usd for li in active_items))
+        dept_totals[d]["paid"] += float(sum(li.equivalent_usd for li in active_items if li.status == "paid"))
+        dept_totals[d]["pending"] += sum(
+            1 for li in active_items
+            if li.status in ("pending_hod", "pending_finance_qc", "qc_query_raised",
+                              "pending_cfo", "pending_ceo", "pending_treasury_payment")
+        )
         if sub.request_type == "urgent":
             dept_totals[d]["urgent"] += 1
 

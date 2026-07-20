@@ -140,24 +140,55 @@ def adjust_category_budget(
         budget.deferred_approved = Decimal(str(budget.deferred_approved)) + delta_deferred
 
 
-def reserve_budget_for_submission(submission, db: Session, line_items=None) -> None:
-    """Reserve (increment approved_mtd/ytd) for every category in a submission's active line items."""
-    items = line_items if line_items is not None else [li for li in submission.line_items if not li.cfo_deferred]
-    for category, amount in category_usd_totals(items).items():
+def reserve_budget_for_items(submission, line_items, db: Session) -> None:
+    """Reserve (increment approved_mtd/ytd) for every category among the given items."""
+    for category, amount in category_usd_totals(line_items).items():
         adjust_category_budget(
             category, submission.cost_type, submission.month, submission.year, db,
             delta_approved=amount,
         )
 
 
-def release_budget_for_submission(submission, db: Session, line_items=None) -> None:
-    """Release a prior reservation (e.g. the request was declined/returned after HOD approval)."""
-    items = line_items if line_items is not None else [li for li in submission.line_items if not li.cfo_deferred]
-    for category, amount in category_usd_totals(items).items():
+def release_budget_for_items(submission, line_items, db: Session) -> None:
+    """Release a prior reservation for the given items (e.g. rejected downstream of HOD)."""
+    for category, amount in category_usd_totals(line_items).items():
         adjust_category_budget(
             category, submission.cost_type, submission.month, submission.year, db,
             delta_approved=-amount,
         )
+
+
+def recompute_submission_status(submission) -> None:
+    """
+    Roll up each line item's own status onto submission.status, used for
+    queue/tracker/report display. "mixed" means the item statuses have
+    diverged — each item's own status remains the real source of truth.
+    """
+    statuses = {li.status for li in submission.line_items}
+    if len(statuses) == 1:
+        submission.status = statuses.pop()
+    elif statuses:
+        submission.status = "mixed"
+
+
+def write_item_decision_log(
+    submission,
+    line_item,
+    action: str,
+    outcome: str,
+    performer: User,
+    db: Session,
+    notes: str | None = None,
+) -> None:
+    db.add(AuditLog(
+        submission_id=submission.id,
+        line_item_id=line_item.id,
+        action=action,
+        outcome=outcome,
+        performed_by=performer.id,
+        amount_usd=float(line_item.equivalent_usd),
+        notes=notes,
+    ))
 
 
 def defer_budget_for_submission(submission, deferred_line_items, target_month: int, db: Session) -> None:
@@ -310,6 +341,7 @@ def create_submission(
             is_arrear=item.is_arrear,
             arrear_type=item.arrear_type if item.is_arrear else None,
             cfo_deferred=False,
+            status="pending_hod",
         ))
 
     overage_note = ""

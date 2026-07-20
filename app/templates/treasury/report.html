@@ -106,23 +106,24 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 border-b border-gray-100">
-            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">ID</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Submission</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Vendor</th>
             <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Department</th>
-            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">USD Total</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">USD</th>
             <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Paid On</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
-          {% for s in recent_paid %}
-          {% set usd_total = s.line_items | rejectattr('cfo_deferred') | map(attribute='equivalent_usd') | sum %}
+          {% for li in recent_paid %}
           <tr class="hover:bg-gray-50 transition-colors">
             <td class="px-4 py-3 font-mono text-xs text-gray-700">
-              <a href="/treasury/submissions/{{ s.submission_id }}" class="text-green-700 hover:underline">{{ s.submission_id }}</a>
+              <a href="/treasury/submissions/{{ li.submission.submission_id }}" class="text-green-700 hover:underline">{{ li.submission.submission_id }}</a>
             </td>
-            <td class="px-4 py-3 text-xs text-gray-600 max-w-[220px] truncate" title="{{ s.department }}">{{ s.department }}</td>
-            <td class="px-4 py-3 text-right font-mono text-gray-900">USD {{ '{:,.2f}'.format(usd_total) }}</td>
+            <td class="px-4 py-3 text-xs text-gray-700">{{ li.vendor_name }}</td>
+            <td class="px-4 py-3 text-xs text-gray-600 max-w-[200px] truncate" title="{{ li.submission.department }}">{{ li.submission.department }}</td>
+            <td class="px-4 py-3 text-right font-mono text-gray-900">USD {{ '{:,.2f}'.format(li.equivalent_usd) }}</td>
             <td class="px-4 py-3 text-xs text-gray-500">
-              {{ s.treasury_updated_at.strftime('%d %b %Y') if s.treasury_updated_at else '—' }}
+              {{ li.treasury_updated_at.strftime('%d %b %Y') if li.treasury_updated_at else '—' }}
             </td>
           </tr>
           {% endfor %}

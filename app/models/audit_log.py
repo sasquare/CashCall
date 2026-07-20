@@ -11,6 +11,8 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"), nullable=False, index=True)
+    # Set when this entry is a per-item decision rather than a whole-submission event.
+    line_item_id: Mapped[int | None] = mapped_column(ForeignKey("line_items.id"), nullable=True, index=True)
 
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     outcome: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -24,6 +26,7 @@ class AuditLog(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     submission: Mapped["Submission"] = relationship("Submission", back_populates="audit_log")  # noqa: F821
+    line_item: Mapped["LineItem | None"] = relationship("LineItem")  # noqa: F821
     performer: Mapped["User"] = relationship("User", back_populates="audit_entries")  # noqa: F821
 
     def __repr__(self) -> str:

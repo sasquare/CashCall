@@ -32,28 +32,17 @@
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ID</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Department</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Active USD</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Payment Status</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">CEO Authorised</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Items Pending</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-50">
         {% for sub in pending %}
-        {% set total = namespace(v=0) %}{% for item in sub.line_items %}{% if not item.cfo_deferred %}{% set total.v = total.v + item.equivalent_usd %}{% endif %}{% endfor %}
         <tr class="hover:bg-amber-50 transition-colors">
           <td class="px-4 py-3 font-mono font-semibold text-gray-900">{{ sub.submission_id }}</td>
           <td class="px-4 py-3 text-gray-700 max-w-[160px] truncate" title="{{ sub.department }}">{{ sub.department }}</td>
           <td class="px-4 py-3 text-gray-600">{{ sub.month_name }}</td>
-          <td class="px-4 py-3 text-right font-mono text-gray-900">{{ '{:,.2f}'.format(total.v) }}</td>
-          <td class="px-4 py-3">
-            {% if sub.treasury_payment_status %}
-            <span class="badge badge-amber text-xs">{{ sub.treasury_payment_status | replace('_',' ') | title }}</span>
-            {% else %}
-            <span class="text-xs text-gray-400">Not set</span>
-            {% endif %}
-          </td>
-          <td class="px-4 py-3 text-gray-500 text-xs">{{ sub.ceo_decided_at.strftime('%d %b %Y') if sub.ceo_decided_at else '—' }}</td>
+          <td class="px-4 py-3 text-right text-gray-600">{{ pending_counts.get(sub.id, 0) }} / {{ sub.line_items | length }}</td>
           <td class="px-4 py-3 text-right">
             <a href="/treasury/submissions/{{ sub.submission_id }}"
                class="inline-flex items-center gap-1 rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-800 transition-colors">
@@ -68,7 +57,7 @@
   </div>
 
   {# Other statuses (not paid, not pending) #}
-  {% if other_statuses %}
+  {% if other_items %}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
     <div class="px-6 py-4 border-b border-gray-100">
       <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">On Hold / Other Status</h2>
@@ -76,26 +65,24 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="bg-gray-50 border-b border-gray-100">
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ID</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Department</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Submission</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Vendor</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Payment Status</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Updated</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-50">
-        {% for sub in other_statuses %}
+        {% for li in other_items %}
         <tr class="hover:bg-gray-50 transition-colors">
-          <td class="px-4 py-3 font-mono text-gray-700">{{ sub.submission_id }}</td>
-          <td class="px-4 py-3 text-gray-600 max-w-[160px] truncate">{{ sub.department }}</td>
-          <td class="px-4 py-3 text-gray-600">{{ sub.month_name }}</td>
+          <td class="px-4 py-3 font-mono text-gray-700">{{ li.submission.submission_id }}</td>
+          <td class="px-4 py-3 text-gray-700">{{ li.vendor_name }}</td>
           <td class="px-4 py-3">
-            <span class="badge badge-amber text-xs">{{ sub.treasury_payment_status | replace('_',' ') | title }}</span>
+            <span class="badge badge-amber text-xs">{{ li.treasury_payment_status | replace('_',' ') | title }}</span>
           </td>
-          <td class="px-4 py-3 text-gray-500 text-xs">{{ sub.treasury_updated_at.strftime('%d %b %Y') if sub.treasury_updated_at else '—' }}</td>
+          <td class="px-4 py-3 text-gray-500 text-xs">{{ li.treasury_updated_at.strftime('%d %b %Y') if li.treasury_updated_at else '—' }}</td>
           <td class="px-4 py-3 text-right">
-            <a href="/treasury/submissions/{{ sub.submission_id }}" class="text-green-700 hover:text-green-900 text-xs font-medium">Update →</a>
+            <a href="/treasury/submissions/{{ li.submission.submission_id }}" class="text-green-700 hover:text-green-900 text-xs font-medium">Update →</a>
           </td>
         </tr>
         {% endfor %}
@@ -105,7 +92,7 @@
   {% endif %}
 
   {# Recently paid #}
-  {% if paid %}
+  {% if paid_items %}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-100">
       <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Recently Paid</h2>
@@ -113,25 +100,22 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="bg-gray-50 border-b border-gray-100">
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ID</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Department</th>
-          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
-          <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Total USD</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Submission</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Vendor</th>
+          <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">USD</th>
           <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Paid on</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-50">
-        {% for sub in paid %}
-        {% set total = namespace(v=0) %}{% for item in sub.line_items %}{% if not item.cfo_deferred %}{% set total.v = total.v + item.equivalent_usd %}{% endif %}{% endfor %}
+        {% for li in paid_items %}
         <tr class="hover:bg-gray-50 transition-colors">
-          <td class="px-4 py-3 font-mono text-gray-700">{{ sub.submission_id }}</td>
-          <td class="px-4 py-3 text-gray-600 max-w-[160px] truncate">{{ sub.department }}</td>
-          <td class="px-4 py-3 text-gray-600">{{ sub.month_name }}</td>
-          <td class="px-4 py-3 text-right font-mono text-gray-900">{{ '{:,.2f}'.format(total.v) }}</td>
-          <td class="px-4 py-3 text-gray-500 text-xs">{{ sub.treasury_updated_at.strftime('%d %b %Y') if sub.treasury_updated_at else '—' }}</td>
+          <td class="px-4 py-3 font-mono text-gray-700">{{ li.submission.submission_id }}</td>
+          <td class="px-4 py-3 text-gray-700">{{ li.vendor_name }}</td>
+          <td class="px-4 py-3 text-right font-mono text-gray-900">USD {{ '{:,.2f}'.format(li.equivalent_usd) }}</td>
+          <td class="px-4 py-3 text-gray-500 text-xs">{{ li.treasury_updated_at.strftime('%d %b %Y') if li.treasury_updated_at else '—' }}</td>
           <td class="px-4 py-3 text-right">
-            <a href="/treasury/submissions/{{ sub.submission_id }}" class="text-green-700 hover:text-green-900 text-xs font-medium">View →</a>
+            <a href="/treasury/submissions/{{ li.submission.submission_id }}" class="text-green-700 hover:text-green-900 text-xs font-medium">View →</a>
           </td>
         </tr>
         {% endfor %}
