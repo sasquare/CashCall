@@ -23,6 +23,7 @@ from app.models.audit_log import AuditLog
 from app.models.line_item import LineItem
 from app.models.submission import Submission
 from app.models.user import User
+from app.services.submission_service import defer_budget_for_submission, release_budget_for_submission
 
 router = APIRouter(prefix="/cfo", tags=["cfo"])
 
@@ -208,6 +209,8 @@ async def cfo_decline(
     sub.cfo_decided_at = now
     sub.cfo_decided_by = current_user.id
 
+    release_budget_for_submission(sub, db)
+
     db.add(AuditLog(
         submission_id=sub.id,
         action="cfo_declined",
@@ -259,6 +262,7 @@ async def cfo_defer(
         raise HTTPException(status_code=422, detail="Select at least one line item to defer.")
 
     all_item_ids = {item.id for item in sub.line_items}
+    deferred_items = [item for item in sub.line_items if item.id in deferred_ids]
     if deferred_ids >= all_item_ids:
         # All items deferred → entire submission deferred
         for item in sub.line_items:
@@ -274,6 +278,8 @@ async def cfo_defer(
                 item.cfo_defer_to_month = defer_to_month
         new_status = "pending_ceo"
         outcome_note = f"{len(deferred_ids)} of {len(all_item_ids)} line item(s) deferred"
+
+    defer_budget_for_submission(sub, deferred_items, defer_to_month, db)
 
     now = datetime.now(timezone.utc)
     sub.status = new_status

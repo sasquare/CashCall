@@ -21,11 +21,11 @@ from app.constants import STATUS_BADGE_COLOURS, SUBMISSION_STATUSES
 from app.database import get_db
 from app.dependencies import require_role
 from app.models.audit_log import AuditLog
-from app.models.category_budget import CategoryBudget
 from app.models.line_item import LineItem
 from app.models.submission import Submission
 from app.models.user import User
 from app.services.email_service import notify_hod_declined, notify_hod_returned
+from app.services.submission_service import reserve_budget_for_submission
 
 router = APIRouter(prefix="/hod", tags=["hod"])
 
@@ -175,6 +175,8 @@ async def hod_approve(
     sub.hod_decided_at = now
     sub.hod_decided_by = current_user.id
 
+    reserve_budget_for_submission(sub, db)
+
     db.add(AuditLog(
         submission_id=sub.id,
         action="hod_approved",
@@ -272,14 +274,16 @@ async def hod_decline(
 # HOD KPI Report
 # ---------------------------------------------------------------------------
 
-HOD_TERMINAL = {"ceo_approved", "paid"}
+# Progressed past HOD and still alive somewhere downstream (or paid).
 HOD_APPROVED_STATUSES = {
-    "hod_approved", "pending_finance_qc", "finance_qc_approved",
-    "pending_cfo", "cfo_approved", "cfo_deferred", "cfo_declined",
-    "pending_ceo", "ceo_approved", "pending_treasury", "paid",
+    "pending_finance_qc", "qc_query_raised", "returned_for_revision",
+    "pending_cfo", "deferred_by_cfo", "pending_ceo",
+    "pending_treasury_payment", "paid",
 }
 HOD_RETURNED_STATUSES = {"hod_returned"}
-HOD_DECLINED_STATUSES = {"hod_declined"}
+# Declined anywhere in the chain, not just at the HOD stage — the department
+# still needs to know their request was ultimately rejected.
+HOD_DECLINED_STATUSES = {"hod_declined", "declined_by_cfo", "declined_by_ceo"}
 
 
 @router.get("/report", response_class=HTMLResponse)
@@ -320,14 +324,18 @@ async def hod_report(
     approved_usd = sum(_usd(s) for s in subs if s.status in HOD_APPROVED_STATUSES)
     paid_usd = sum(_usd(s) for s in subs if s.status == "paid")
 
-    # Budget
-    budget = db.query(CategoryBudget).filter(
-        CategoryBudget.department == dept,
-        CategoryBudget.month == sel_month,
-        CategoryBudget.year == sel_year,
-    ).first()
-    allocation_usd = float(budget.monthly_allocation_usd) if budget else 0.0
-    utilisation_pct = round((approved_usd / allocation_usd * 100), 1) if allocation_usd else None
+    # Spend by category — informational only. Budgets are company-wide per
+    # category, not owned by any one department, so there's no per-department
+    # allocation to compare against here (see /admin/reports for that view).
+    category_usd: dict[str, float] = {}
+    for s in subs:
+        if s.status not in HOD_APPROVED_STATUSES:
+            continue
+        for li in s.line_items:
+            if li.cfo_deferred:
+                continue
+            category_usd[li.category] = category_usd.get(li.category, 0.0) + float(li.equivalent_usd)
+    category_usd = dict(sorted(category_usd.items(), key=lambda kv: kv[1], reverse=True))
 
     # Cost type breakdown
     opex_usd = sum(_usd(s) for s in subs if s.status in HOD_APPROVED_STATUSES and s.cost_type == "opex")
@@ -357,12 +365,11 @@ async def hod_report(
         pending=pending,
         approved_usd=approved_usd,
         paid_usd=paid_usd,
-        allocation_usd=allocation_usd,
-        utilisation_pct=utilisation_pct,
+        category_usd=category_usd,
         opex_usd=opex_usd,
         capex_usd=capex_usd,
         urgent_count=urgent_count,
         standard_count=standard_count,
         recent=recent,
-        over_budget=allocation_usd > 0 and approved_usd > allocation_usd,
+        badge_colours=STATUS_BADGE_COLOURS,
     ))

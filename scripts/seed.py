@@ -109,7 +109,19 @@ SAMPLE_DEPARTMENTS = [
     ("Polymer Block - Mechanical",           "poly.mech"),
 ]
 
-DEPT_BUDGET_USD = 500_000.00   # illustrative monthly allocation per dept
+# ---------------------------------------------------------------------------
+# Real 2026 OPEX budget by category, as supplied by Finance.
+# Company-wide, per category, per month — NOT per department.
+# Index 0 = January … index 11 = December.
+# ---------------------------------------------------------------------------
+BUDGET_YEAR = 2026
+OPEX_BUDGET_2026: dict[str, list[float]] = {
+    "Catalyst & Chemicals": [4262196.59, 6655458.42, 9391280.61, 9088336.08, 9391280.61, 9088336.08, 9391280.61, 9391280.61, 9088336.08, 9391280.61, 9088336.08, 9391280.61],
+    "Crude Shipping / Marine": [8309586.22, 12975493.85, 18309257.78, 17718636.56, 18309257.78, 17718636.56, 18309257.78, 18309257.78, 17718636.56, 18309257.78, 17718636.56, 18309257.78],
+    "Maintenance Cost": [5866637.66, 9160807.63, 12926489.76, 12509506.22, 12926489.76, 12509506.22, 12926489.76, 12926489.76, 12509506.22, 12926489.76, 12509506.22, 12926489.76],
+    "Admin & Insurance": [9395031.53, 10196389.24, 11112449.56, 11011011.88, 11112449.56, 11011011.88, 11112449.56, 11112449.56, 11011011.88, 11112449.56, 11011011.88, 11112449.56],
+    "Communication / Internet": [382372.81, 382372.81, 382372.81, 382372.81, 382372.81, 382372.81, 382372.81, 382372.81, 382372.81, 382372.81, 382372.81, 382372.81],
+}
 
 
 def _make_dept_users(department: str, slug: str) -> list[dict]:
@@ -190,29 +202,31 @@ def seed_exchange_rates(db, updated_by_id: int) -> None:
 
 
 def seed_budgets(db) -> None:
-    for dept, _slug in SAMPLE_DEPARTMENTS:
-        existing = (
-            db.query(CategoryBudget)
-            .filter(
-                CategoryBudget.department == dept,
-                CategoryBudget.month == CURRENT_MONTH,
-                CategoryBudget.year == CURRENT_YEAR,
+    """Load Finance's real 2026 OPEX budget — company-wide, per category, per month."""
+    for category, monthly_values in OPEX_BUDGET_2026.items():
+        for month_idx, allocation in enumerate(monthly_values, start=1):
+            existing = (
+                db.query(CategoryBudget)
+                .filter(
+                    CategoryBudget.category == category,
+                    CategoryBudget.cost_type == "opex",
+                    CategoryBudget.month == month_idx,
+                    CategoryBudget.year == BUDGET_YEAR,
+                )
+                .first()
             )
-            .first()
-        )
-        if existing:
-            print(f"  SKIP  Budget {dept} {CURRENT_MONTH}/{CURRENT_YEAR}")
-            continue
-        budget = CategoryBudget(
-            department=dept,
-            month=CURRENT_MONTH,
-            year=CURRENT_YEAR,
-            monthly_allocation_usd=DEPT_BUDGET_USD,
-            monthly_allocation_ngn=DEPT_BUDGET_USD * 1600,
-            annual_allocation_usd=DEPT_BUDGET_USD * 12,
-        )
-        db.add(budget)
-        print(f"  ADD   Budget {dept} {CURRENT_MONTH}/{CURRENT_YEAR} = ${DEPT_BUDGET_USD:,.0f}")
+            if existing:
+                existing.monthly_allocation_usd = allocation
+                print(f"  UPDATE Budget {category} ({month_idx}/{BUDGET_YEAR}) = ${allocation:,.2f}")
+                continue
+            db.add(CategoryBudget(
+                category=category,
+                cost_type="opex",
+                month=month_idx,
+                year=BUDGET_YEAR,
+                monthly_allocation_usd=allocation,
+            ))
+            print(f"  ADD   Budget {category} ({month_idx}/{BUDGET_YEAR}) = ${allocation:,.2f}")
     db.commit()
 
 

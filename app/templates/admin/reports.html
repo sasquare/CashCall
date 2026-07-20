@@ -67,6 +67,63 @@
   </div>
   {% endif %}
 
+  {# Budget by category #}
+  {% if category_budgets %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Budget by Category</h2>
+      <a href="/admin/budgets?month={{ sel_month }}&year={{ sel_year }}" class="text-xs text-green-700 hover:underline font-medium">Manage allocations →</a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 border-b border-gray-100">
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Category</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Cost Type</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Allocation USD</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Approved MTD</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Paid MTD</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Remaining</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Utilisation</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for b in category_budgets %}
+          {% set alloc = b.monthly_allocation_usd | float %}
+          {% set approved = b.approved_mtd | float %}
+          {% set deferred = b.deferred_approved | float %}
+          {% set remaining = alloc - approved - deferred %}
+          {% set util = ((approved / alloc * 100) | round(1)) if alloc > 0 else 0 %}
+          <tr class="hover:bg-gray-50 {% if remaining < 0 %}bg-red-50{% endif %}">
+            <td class="px-4 py-2.5 text-xs text-gray-800 font-medium">{{ b.category }}</td>
+            <td class="px-4 py-2.5 text-xs uppercase text-gray-500">{{ b.cost_type }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-gray-900">{{ '{:,.0f}'.format(alloc) if alloc else '—' }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-gray-700">{{ '{:,.0f}'.format(approved) }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-green-700">{{ '{:,.0f}'.format(b.paid_mtd | float) }}</td>
+            <td class="px-4 py-2.5 text-right font-mono {% if remaining < 0 %}text-red-600 font-bold{% else %}text-gray-700{% endif %}">
+              {{ '{:,.0f}'.format(remaining) if alloc else '—' }}
+            </td>
+            <td class="px-4 py-2.5">
+              {% if alloc > 0 %}
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-gray-200 rounded-full h-1.5 max-w-[60px]">
+                  <div class="h-1.5 rounded-full {% if util > 100 %}bg-red-500{% elif util > 80 %}bg-amber-500{% else %}bg-green-500{% endif %}"
+                       style="width: {{ [util, 100] | min }}%"></div>
+                </div>
+                <span class="text-xs {% if util > 100 %}text-red-600 font-bold{% else %}text-gray-500{% endif %}">{{ util }}%</span>
+              </div>
+              {% else %}
+              <span class="text-xs text-gray-400">No budget set</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
   {# Department breakdown #}
   {% if dept_totals %}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
@@ -81,38 +138,19 @@
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Submissions</th>
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Total USD</th>
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Paid USD</th>
-            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Budget USD</th>
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Pending</th>
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Urgent</th>
-            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Budget Use</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
           {% for dept, row in dept_totals.items() %}
-          {% set budget = budget_map.get(dept) %}
-          {% set alloc = (budget.monthly_allocation_usd | float) if budget else 0 %}
-          {% set util = ((row.total_usd / alloc * 100) | round(1)) if alloc > 0 else 0 %}
           <tr class="hover:bg-gray-50">
             <td class="px-4 py-2.5 text-xs text-gray-700 max-w-[200px] truncate" title="{{ dept }}">{{ dept }}</td>
             <td class="px-4 py-2.5 text-right text-gray-700">{{ row.count }}</td>
             <td class="px-4 py-2.5 text-right font-mono text-gray-900">{{ '{:,.0f}'.format(row.total_usd) }}</td>
             <td class="px-4 py-2.5 text-right font-mono text-green-700">{{ '{:,.0f}'.format(row.paid) }}</td>
-            <td class="px-4 py-2.5 text-right font-mono text-gray-500">{{ '{:,.0f}'.format(alloc) if alloc else '—' }}</td>
             <td class="px-4 py-2.5 text-right {% if row.pending > 0 %}text-amber-600 font-medium{% else %}text-gray-400{% endif %}">{{ row.pending }}</td>
             <td class="px-4 py-2.5 text-right {% if row.urgent > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">{{ row.urgent }}</td>
-            <td class="px-4 py-2.5">
-              {% if alloc > 0 %}
-              <div class="flex items-center gap-2">
-                <div class="flex-1 bg-gray-200 rounded-full h-1.5 max-w-[60px]">
-                  <div class="h-1.5 rounded-full {% if util > 100 %}bg-red-500{% elif util > 80 %}bg-amber-500{% else %}bg-green-500{% endif %}"
-                       style="width: {{ [util, 100] | min }}%"></div>
-                </div>
-                <span class="text-xs {% if util > 100 %}text-red-600 font-bold{% else %}text-gray-500{% endif %}">{{ util }}%</span>
-              </div>
-              {% else %}
-              <span class="text-xs text-gray-400">No budget</span>
-              {% endif %}
-            </td>
           </tr>
           {% endfor %}
         </tbody>

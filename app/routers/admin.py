@@ -31,7 +31,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.constants import (
-    ALL_DEPARTMENTS,
+    CASH_CALL_CATEGORIES,
+    COST_TYPES,
     CURRENCIES,
     DEPARTMENT_GROUPS,
     MONTH_NAMES,
@@ -361,16 +362,17 @@ async def budgets_list(
     budgets = (
         db.query(CategoryBudget)
         .filter(CategoryBudget.month == sel_month, CategoryBudget.year == sel_year)
-        .order_by(CategoryBudget.department)
+        .order_by(CategoryBudget.cost_type, CategoryBudget.category)
         .all()
     )
-    budget_map = {b.department: b for b in budgets}
+    budget_map = {(b.category, b.cost_type): b for b in budgets}
 
     tmpl = _templates(request)
     return tmpl.TemplateResponse("admin/budgets.html", _ctx(
         request, user=current_user,
         budgets=budgets, budget_map=budget_map,
-        all_departments=ALL_DEPARTMENTS,
+        categories=CASH_CALL_CATEGORIES,
+        cost_types=COST_TYPES,
         sel_month=sel_month, sel_year=sel_year,
         month_names=MONTH_NAMES,
         years=list(range(today.year - 1, today.year + 3)),
@@ -384,22 +386,24 @@ async def upsert_budget(
     db: Session = Depends(get_db),
 ):
     form = dict(await request.form())
-    department = form.get("department", "").strip()
-    if not department:
-        raise HTTPException(status_code=422, detail="Department is required.")
+    category = form.get("category", "").strip()
+    cost_type = form.get("cost_type", "").strip()
+    if category not in CASH_CALL_CATEGORIES:
+        raise HTTPException(status_code=422, detail="Invalid category.")
+    if cost_type not in COST_TYPES:
+        raise HTTPException(status_code=422, detail="Invalid cost type.")
     try:
         month = int(form["month"])
         year = int(form["year"])
         allocation_usd = float(form.get("monthly_allocation_usd", "0") or "0")
-        allocation_ngn = float(form.get("monthly_allocation_ngn", "0") or "0")
-        annual_usd = float(form.get("annual_allocation_usd", "0") or "0")
     except (ValueError, KeyError):
         raise HTTPException(status_code=422, detail="Invalid numeric values.")
 
     existing = (
         db.query(CategoryBudget)
         .filter(
-            CategoryBudget.department == department,
+            CategoryBudget.category == category,
+            CategoryBudget.cost_type == cost_type,
             CategoryBudget.month == month,
             CategoryBudget.year == year,
         )
@@ -407,16 +411,13 @@ async def upsert_budget(
     )
     if existing:
         existing.monthly_allocation_usd = allocation_usd
-        existing.monthly_allocation_ngn = allocation_ngn
-        existing.annual_allocation_usd = annual_usd
     else:
         db.add(CategoryBudget(
-            department=department,
+            category=category,
+            cost_type=cost_type,
             month=month,
             year=year,
             monthly_allocation_usd=allocation_usd,
-            monthly_allocation_ngn=allocation_ngn,
-            annual_allocation_usd=annual_usd,
         ))
     db.commit()
     return RedirectResponse(
@@ -506,13 +507,14 @@ async def reports(
         if sub.request_type == "urgent":
             dept_totals[d]["urgent"] += 1
 
-    # Budget utilisation for this period
-    budgets = (
+    # Budget by category for this period — the authoritative running totals,
+    # already maintained by the approval workflow (see submission_service.py).
+    category_budgets = (
         db.query(CategoryBudget)
         .filter(CategoryBudget.month == sel_month, CategoryBudget.year == sel_year)
+        .order_by(CategoryBudget.cost_type, CategoryBudget.category)
         .all()
     )
-    budget_map = {b.department: b for b in budgets}
 
     tmpl = _templates(request)
     return tmpl.TemplateResponse("admin/reports.html", _ctx(
@@ -523,5 +525,5 @@ async def reports(
         total_subs=len(period_subs),
         status_counts=status_counts,
         dept_totals=dict(sorted(dept_totals.items())),
-        budget_map=budget_map,
+        category_budgets=category_budgets,
     ))

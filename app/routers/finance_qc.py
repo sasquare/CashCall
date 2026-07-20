@@ -22,6 +22,7 @@ from app.dependencies import require_role
 from app.models.audit_log import AuditLog
 from app.models.submission import Submission
 from app.models.user import User
+from app.services.submission_service import release_budget_for_submission
 
 router = APIRouter(prefix="/finance", tags=["finance_qc"])
 
@@ -236,6 +237,8 @@ async def finance_return(
     sub.finance_qc_comment = comment.strip()
     sub.finance_qc_at = now
     sub.finance_qc_by = current_user.id
+
+    release_budget_for_submission(sub, db)
 
     db.add(AuditLog(
         submission_id=sub.id,

@@ -6,7 +6,7 @@
 
   <div class="mb-6">
     <h1 class="text-2xl font-bold text-gray-900">Budget Management</h1>
-    <p class="mt-1 text-sm text-gray-500">Monthly allocations per department. Submissions exceeding remaining budget are flagged but not blocked.</p>
+    <p class="mt-1 text-sm text-gray-500">Monthly allocations per spend category, company-wide. Submissions exceeding remaining budget are flagged but not blocked.</p>
   </div>
 
   {% if request.query_params.get('saved') %}
@@ -37,17 +37,27 @@
   {# Add / edit budget row #}
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
     <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Set Allocation</h2>
-    <form method="POST" action="/admin/budgets" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+    <form method="POST" action="/admin/budgets" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
       <input type="hidden" name="month" value="{{ sel_month }}">
       <input type="hidden" name="year" value="{{ sel_year }}">
 
-      <div class="md:col-span-3">
-        <label class="block text-xs font-medium text-gray-600 mb-1">Department <span class="text-red-500">*</span></label>
-        <select name="department" required
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Category <span class="text-red-500">*</span></label>
+        <select name="category" required
                 class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-600">
-          <option value="">Select department…</option>
-          {% for dept in all_departments %}
-          <option value="{{ dept }}">{{ dept }}</option>
+          <option value="">Select category…</option>
+          {% for cat in categories %}
+          <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Cost Type <span class="text-red-500">*</span></label>
+        <select name="cost_type" required
+                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-600">
+          {% for ct in cost_types %}
+          <option value="{{ ct }}">{{ ct | upper }}</option>
           {% endfor %}
         </select>
       </div>
@@ -57,19 +67,8 @@
         <input type="number" name="monthly_allocation_usd" min="0" step="0.01" placeholder="0.00"
                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
       </div>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Monthly Allocation (NGN)</label>
-        <input type="number" name="monthly_allocation_ngn" min="0" step="0.01" placeholder="0.00"
-               class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Annual Allocation (USD)</label>
-        <div class="flex gap-2">
-          <input type="number" name="annual_allocation_usd" min="0" step="0.01" placeholder="0.00"
-                 class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
-          <button type="submit" class="rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800 whitespace-nowrap">Save</button>
-        </div>
-      </div>
+
+      <button type="submit" class="rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800 whitespace-nowrap">Save</button>
     </form>
   </div>
 
@@ -79,7 +78,7 @@
       <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">
         {{ month_names[sel_month] }} {{ sel_year }}
       </h2>
-      <span class="text-xs text-gray-400">{{ budgets | length }} department(s) configured</span>
+      <span class="text-xs text-gray-400">{{ budgets | length }} categor{{ 'y' if budgets|length == 1 else 'ies' }} configured</span>
     </div>
 
     {% if not budgets %}
@@ -91,10 +90,11 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 border-b border-gray-100">
-            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Department</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Category</th>
+            <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Cost Type</th>
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Allocation USD</th>
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Approved MTD</th>
-            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Deferred</th>
+            <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Deferred In</th>
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Remaining</th>
             <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Paid MTD</th>
             <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Utilisation</th>
@@ -108,7 +108,8 @@
           {% set remaining = alloc - approved - deferred %}
           {% set util_pct = ((approved / alloc * 100) | round(1)) if alloc > 0 else 0 %}
           <tr class="hover:bg-gray-50 {% if remaining < 0 %}bg-red-50{% endif %}">
-            <td class="px-4 py-3 text-gray-800 text-xs max-w-[200px] truncate" title="{{ b.department }}">{{ b.department }}</td>
+            <td class="px-4 py-3 text-gray-800 text-xs font-medium">{{ b.category }}</td>
+            <td class="px-4 py-3 text-xs uppercase text-gray-500">{{ b.cost_type }}</td>
             <td class="px-4 py-3 text-right font-mono text-gray-900">{{ '{:,.0f}'.format(alloc) }}</td>
             <td class="px-4 py-3 text-right font-mono text-gray-700">{{ '{:,.0f}'.format(approved) }}</td>
             <td class="px-4 py-3 text-right font-mono text-purple-600">{{ '{:,.0f}'.format(deferred) }}</td>

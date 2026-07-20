@@ -81,6 +81,7 @@
           {% if role == "hod" %}
             <a href="/hod/queue"   class="nav-link">Pending Approvals</a>
             <a href="/hod/tracker" class="nav-link">Tracker</a>
+            <a href="/hod/report"  class="nav-link">KPI Report</a>
           {% endif %}
 
           {% if role == "finance_reviewer" %}
@@ -100,6 +101,7 @@
 
           {% if role == "treasury" %}
             <a href="/treasury/queue" class="nav-link">Payment Queue</a>
+            <a href="/treasury/report" class="nav-link">KPI Report</a>
           {% endif %}
 
           {% if role in ["cfo", "ceo", "finance_reviewer", "it_admin"] %}
@@ -143,6 +145,7 @@
       {% if role == "hod" %}
         <a href="/hod/queue"   class="mob-link">Queue</a>
         <a href="/hod/tracker" class="mob-link">Tracker</a>
+        <a href="/hod/report"  class="mob-link">KPI Report</a>
       {% endif %}
       {% if role == "finance_reviewer" %}
         <a href="/finance/queue" class="mob-link">QC Queue</a>
@@ -157,6 +160,7 @@
       {% endif %}
       {% if role == "treasury" %}
         <a href="/treasury/queue" class="mob-link">Payments</a>
+        <a href="/treasury/report" class="mob-link">KPI Report</a>
       {% endif %}
       {% if role in ["cfo", "ceo", "finance_reviewer", "it_admin"] %}
         <a href="/admin/reports" class="mob-link">Reports</a>

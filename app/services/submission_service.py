@@ -80,38 +80,141 @@ def convert_to_usd(amount: Decimal, currency: str, db: Session) -> tuple[Decimal
 
 
 # ---------------------------------------------------------------------------
-# Budget check
+# Budget — category-scoped (company-wide; NOT per department)
 # ---------------------------------------------------------------------------
 
-def check_budget(
-    department: str,
-    month: int,
-    year: int,
-    total_requested_usd: Decimal,
-    db: Session,
-) -> tuple[bool, Decimal]:
-    """
-    Returns (over_limit: bool, overage_amount: Decimal).
-    over_limit=False if no budget row is configured (warn-only policy).
-    """
+def category_usd_totals(line_items) -> dict[str, Decimal]:
+    """Sum equivalent_usd per category across a set of line items (ORM objects or dicts)."""
+    totals: dict[str, Decimal] = {}
+    for li in line_items:
+        category = li["category"] if isinstance(li, dict) else li.category
+        amount = li["equivalent_usd"] if isinstance(li, dict) else li.equivalent_usd
+        totals[category] = totals.get(category, Decimal("0")) + Decimal(str(amount))
+    return totals
+
+
+def get_or_create_budget(category: str, cost_type: str, month: int, year: int, db: Session) -> CategoryBudget:
     budget = (
         db.query(CategoryBudget)
         .filter(
-            CategoryBudget.department == department,
+            CategoryBudget.category == category,
+            CategoryBudget.cost_type == cost_type,
             CategoryBudget.month == month,
             CategoryBudget.year == year,
         )
         .first()
     )
-    if not budget or not budget.monthly_allocation_usd:
-        return False, Decimal("0")
+    if not budget:
+        budget = CategoryBudget(category=category, cost_type=cost_type, month=month, year=year)
+        db.add(budget)
+        db.flush()
+    return budget
 
-    allocation = Decimal(str(budget.monthly_allocation_usd))
-    approved = Decimal(str(budget.approved_mtd))
-    deferred = Decimal(str(budget.deferred_approved))
-    remaining = allocation - approved - deferred
-    overage = total_requested_usd - remaining
-    return overage > 0, max(overage, Decimal("0"))
+
+def adjust_category_budget(
+    category: str,
+    cost_type: str,
+    month: int,
+    year: int,
+    db: Session,
+    delta_approved: Decimal = Decimal("0"),
+    delta_paid: Decimal = Decimal("0"),
+    delta_deferred: Decimal = Decimal("0"),
+) -> None:
+    """
+    Moves the running totals on a category's budget row. Positive deltas reserve/add,
+    negative deltas release. Called at every point a submission's line items change
+    whether they count against the budget (HOD approval reserves; a later decline/
+    return releases; CFO defer moves the reservation to the target month; Treasury
+    marking paid adds to paid_mtd without releasing the approval reservation).
+    """
+    if not (delta_approved or delta_paid or delta_deferred):
+        return
+    budget = get_or_create_budget(category, cost_type, month, year, db)
+    if delta_approved:
+        budget.approved_mtd = Decimal(str(budget.approved_mtd)) + delta_approved
+        budget.approved_ytd = Decimal(str(budget.approved_ytd)) + delta_approved
+    if delta_paid:
+        budget.paid_mtd = Decimal(str(budget.paid_mtd)) + delta_paid
+    if delta_deferred:
+        budget.deferred_approved = Decimal(str(budget.deferred_approved)) + delta_deferred
+
+
+def reserve_budget_for_submission(submission, db: Session, line_items=None) -> None:
+    """Reserve (increment approved_mtd/ytd) for every category in a submission's active line items."""
+    items = line_items if line_items is not None else [li for li in submission.line_items if not li.cfo_deferred]
+    for category, amount in category_usd_totals(items).items():
+        adjust_category_budget(
+            category, submission.cost_type, submission.month, submission.year, db,
+            delta_approved=amount,
+        )
+
+
+def release_budget_for_submission(submission, db: Session, line_items=None) -> None:
+    """Release a prior reservation (e.g. the request was declined/returned after HOD approval)."""
+    items = line_items if line_items is not None else [li for li in submission.line_items if not li.cfo_deferred]
+    for category, amount in category_usd_totals(items).items():
+        adjust_category_budget(
+            category, submission.cost_type, submission.month, submission.year, db,
+            delta_approved=-amount,
+        )
+
+
+def defer_budget_for_submission(submission, deferred_line_items, target_month: int, db: Session) -> None:
+    """Move a reservation from the submission's original month to the CFO-selected target month."""
+    for category, amount in category_usd_totals(deferred_line_items).items():
+        adjust_category_budget(
+            category, submission.cost_type, submission.month, submission.year, db,
+            delta_approved=-amount,
+        )
+        adjust_category_budget(
+            category, submission.cost_type, target_month, submission.year, db,
+            delta_deferred=amount,
+        )
+
+
+def check_category_budgets(
+    cost_type: str,
+    month: int,
+    year: int,
+    category_usd: dict[str, Decimal],
+    db: Session,
+) -> tuple[bool, list[dict]]:
+    """
+    Checks each category present in a submission against its own budget row.
+    Returns (any_over_limit, details) — details lists only the categories that
+    are over. A category with no budget row configured is skipped (warn-only
+    policy, same as before).
+    """
+    any_over = False
+    details: list[dict] = []
+    for category, requested in category_usd.items():
+        budget = (
+            db.query(CategoryBudget)
+            .filter(
+                CategoryBudget.category == category,
+                CategoryBudget.cost_type == cost_type,
+                CategoryBudget.month == month,
+                CategoryBudget.year == year,
+            )
+            .first()
+        )
+        if not budget or not budget.monthly_allocation_usd:
+            continue
+        allocation = Decimal(str(budget.monthly_allocation_usd))
+        approved = Decimal(str(budget.approved_mtd))
+        deferred = Decimal(str(budget.deferred_approved))
+        remaining = allocation - approved - deferred
+        overage = requested - remaining
+        if overage > 0:
+            any_over = True
+            details.append({
+                "category": category,
+                "requested": requested,
+                "remaining_before": remaining,
+                "overage": overage,
+            })
+    return any_over, details
 
 
 # ---------------------------------------------------------------------------
@@ -141,19 +244,22 @@ def create_submission(
     # Compute USD for every line item first (validates all rates exist)
     line_item_data: list[dict] = []
     total_usd = Decimal("0")
+    category_usd: dict[str, Decimal] = {}
 
     for item in data.line_items:
         eq_usd, rate_used = convert_to_usd(item.original_amount, item.currency, db)
         total_usd += eq_usd
+        category_usd[item.category] = category_usd.get(item.category, Decimal("0")) + eq_usd
         line_item_data.append({
             "item": item,
             "equivalent_usd": eq_usd,
             "exchange_rate_used": rate_used,
         })
 
-    # Budget check
-    over_limit, overage = check_budget(
-        data.department, data.month, data.year, total_usd, db
+    # Budget check — informational flag only; the actual reservation against the
+    # category budget happens at HOD approval (see reserve_budget_for_submission).
+    over_limit, overage_details = check_category_budgets(
+        data.cost_type, data.month, data.year, category_usd, db
     )
 
     # Generate human-readable ID
@@ -206,6 +312,11 @@ def create_submission(
             cfo_deferred=False,
         ))
 
+    overage_note = ""
+    if over_limit:
+        parts = [f"{d['category']} over by USD {d['overage']:,.2f}" for d in overage_details]
+        overage_note = f" Budget over-limit — {'; '.join(parts)}."
+
     db.add(AuditLog(
         submission_id=submission.id,
         action="submission_created",
@@ -215,7 +326,7 @@ def create_submission(
         notes=f"{'URGENT — ' if is_urgent else ''}Submitted by {creator.display_name}. "
               f"{len(data.line_items)} line item(s). "
               f"Total: USD {total_usd:,.2f}."
-              + (f" Budget over-limit by USD {overage:,.2f}." if over_limit else "")
+              + overage_note
               + (f" Urgency: {data.urgency_category}. Requested payment: {data.requested_payment_date}." if is_urgent else ""),
     ))
 

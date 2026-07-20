@@ -19,6 +19,7 @@ from app.dependencies import require_role
 from app.models.audit_log import AuditLog
 from app.models.submission import Submission
 from app.models.user import User
+from app.services.submission_service import release_budget_for_submission
 
 router = APIRouter(prefix="/ceo", tags=["ceo"])
 
@@ -147,6 +148,8 @@ async def ceo_decline(
     sub.ceo_reason = comment.strip()
     sub.ceo_decided_at = now
     sub.ceo_decided_by = current_user.id
+
+    release_budget_for_submission(sub, db)
 
     db.add(AuditLog(
         submission_id=sub.id,
