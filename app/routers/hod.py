@@ -1,6 +1,7 @@
 """
 HOD approval routes:
   GET  /hod/queue              — pending submissions for HOD's department
+  GET  /hod/tracker            — all department submissions, any status, searchable
   GET  /hod/submissions/{id}   — review a submission
   POST /hod/submissions/{id}/approve  — approve
   POST /hod/submissions/{id}/return   — return to originator
@@ -16,6 +17,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.constants import STATUS_BADGE_COLOURS, SUBMISSION_STATUSES
 from app.database import get_db
 from app.dependencies import require_role
 from app.models.audit_log import AuditLog
@@ -85,6 +87,42 @@ async def hod_queue(
     return tmpl.TemplateResponse(
         "hod/queue.html",
         _ctx(request, user=current_user, pending=pending, reviewed=reviewed),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tracker — every department submission, any status, searchable
+# ---------------------------------------------------------------------------
+
+@router.get("/tracker", response_class=HTMLResponse)
+async def hod_tracker(
+    request: Request,
+    current_user: User = Depends(require_role("hod")),
+    db: Session = Depends(get_db),
+):
+    status_filter = request.query_params.get("status", "").strip()
+    search = request.query_params.get("q", "").strip()
+
+    q = db.query(Submission).filter(Submission.department == current_user.department)
+    if status_filter:
+        q = q.filter(Submission.status == status_filter)
+    if search:
+        q = q.filter(Submission.submission_id.ilike(f"%{search}%"))
+
+    submissions = q.order_by(Submission.created_at.desc()).limit(300).all()
+
+    tmpl = _templates(request)
+    return tmpl.TemplateResponse(
+        "hod/tracker.html",
+        _ctx(
+            request,
+            user=current_user,
+            submissions=submissions,
+            status_filter=status_filter,
+            search=search,
+            all_statuses=SUBMISSION_STATUSES,
+            badge_colours=STATUS_BADGE_COLOURS,
+        ),
     )
 
 
@@ -183,7 +221,7 @@ async def hod_return(
     ))
     db.commit()
 
-    originator = db.query(User).filter(User.id == sub.creator_id).first()
+    originator = db.query(User).filter(User.id == sub.created_by).first()
     if originator:
         notify_hod_returned(originator.email, submission_id, comment.strip())
 
@@ -223,7 +261,7 @@ async def hod_decline(
     ))
     db.commit()
 
-    originator = db.query(User).filter(User.id == sub.creator_id).first()
+    originator = db.query(User).filter(User.id == sub.created_by).first()
     if originator:
         notify_hod_declined(originator.email, submission_id, comment.strip())
 

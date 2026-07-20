@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Bulk Import — Multiple Submissions{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Bulk Import — Multiple Submissions</h1>
+    <p class="mt-1 text-sm text-gray-500">
+      Upload one Excel file to create several cash call submissions at once. Give every line item
+      belonging to the same submission the same <strong>Batch Ref</strong> value — each distinct
+      Batch Ref becomes its own submission (max 10 line items each, same rule as manual entry).
+    </p>
+  </div>
+
+  <div class="card p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold text-gray-800">Step 1 — Download the template</p>
+      <p class="text-xs text-gray-500 mt-0.5">Fill it in exactly as laid out, then upload it below.</p>
+    </div>
+    <a href="/submissions/bulk-import/template" class="btn-primary">Download Template (.xlsx)</a>
+  </div>
+
+  {% if errors %}
+  <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
+    <p class="text-sm font-bold text-red-800 mb-1">Could not process the file</p>
+    <ul class="text-sm text-red-700 list-disc list-inside">
+      {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/submissions/bulk-import" enctype="multipart/form-data" class="card p-6 space-y-5">
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Step 2 — Upload your filled-in template</label>
+      <input type="file" name="file" accept=".xlsx" required class="text-sm">
+    </div>
+    <div class="flex flex-wrap justify-end gap-3 pt-2">
+      <a href="/submissions/new" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+        Use manual form instead
+      </a>
+      <button type="submit" class="btn-primary">Upload &amp; Create Submissions</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

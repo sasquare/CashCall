@@ -3,14 +3,12 @@
 
 {% block content %}
 {% set badge_colours = {
-  'pending_hod': 'amber', 'hod_approved': 'amber',
-  'hod_returned': 'red', 'hod_declined': 'red',
-  'pending_finance_qc': 'amber', 'finance_qc_approved': 'amber',
-  'finance_qc_returned': 'red',
-  'pending_cfo': 'amber', 'cfo_approved': 'amber',
-  'cfo_deferred': 'purple', 'cfo_declined': 'red',
-  'pending_ceo': 'amber', 'ceo_approved': 'green', 'ceo_declined': 'red',
-  'pending_treasury': 'amber', 'paid': 'green', 'cancelled': 'gray'
+  'pending_hod': 'amber', 'hod_returned': 'purple', 'hod_declined': 'red',
+  'pending_finance_qc': 'amber', 'qc_query_raised': 'purple',
+  'returned_for_revision': 'purple',
+  'pending_cfo': 'amber', 'declined_by_cfo': 'red', 'deferred_by_cfo': 'gray',
+  'pending_ceo': 'amber', 'declined_by_ceo': 'red',
+  'pending_treasury_payment': 'amber', 'paid': 'green', 'cancelled': 'gray'
 } %}
 {% set colour = badge_colours.get(submission.status, 'gray') %}
 

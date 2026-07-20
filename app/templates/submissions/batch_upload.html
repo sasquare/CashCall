@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Batch Upload — Line Items{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Batch Upload — Line Items</h1>
+    <p class="mt-1 text-sm text-gray-500">
+      Upload an Excel file with your line items (up to 10) to create one submission in a single step,
+      instead of typing each row manually.
+    </p>
+  </div>
+
+  <div class="card p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold text-gray-800">Step 1 — Download the template</p>
+      <p class="text-xs text-gray-500 mt-0.5">Fill it in exactly as laid out, then upload it below.</p>
+    </div>
+    <a href="/submissions/batch-upload/template" class="btn-primary">Download Template (.xlsx)</a>
+  </div>
+
+  {% if errors %}
+  <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
+    <p class="text-sm font-bold text-red-800 mb-1">Could not process the file</p>
+    <ul class="text-sm text-red-700 list-disc list-inside">
+      {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if row_errors %}
+  <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
+    <p class="text-sm font-bold text-red-800 mb-2">Fix these rows and re-upload</p>
+    <ul class="text-sm text-red-700 space-y-1 list-disc list-inside">
+      {% for e in row_errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/submissions/batch-upload" enctype="multipart/form-data" class="card p-6 space-y-5">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Department</label>
+        <select name="department" required>
+          <option value="">Select department…</option>
+          {% for group, depts in department_groups.items() %}
+          <optgroup label="{{ group }}">
+            {% for d in depts %}
+            <option value="{{ d }}" {% if form_data.department == d %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Cost Type</label>
+        <select name="cost_type" required>
+          <option value="">Select…</option>
+          <option value="opex" {% if form_data.cost_type == 'opex' %}selected{% endif %}>OPEX</option>
+          <option value="capex" {% if form_data.cost_type == 'capex' %}selected{% endif %}>CAPEX</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Month</label>
+        <select name="month" required>
+          <option value="">Select…</option>
+          {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if form_data.month == m|string %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Year</label>
+        <input type="number" name="year" value="{{ form_data.year or '' }}" required>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Supporting Justification</label>
+      <textarea name="supporting_justification" rows="3" required>{{ form_data.supporting_justification or '' }}</textarea>
+    </div>
+
+    <div class="border-t border-gray-100 pt-4">
+      <label class="flex items-center gap-2 text-sm text-gray-700">
+        <input type="checkbox" name="is_urgent" class="w-4 h-4"
+               {% if form_data.is_urgent == 'on' %}checked{% endif %}
+               onchange="document.getElementById('urgent-fields').classList.toggle('hidden', !this.checked)">
+        This is an urgent cash call
+      </label>
+      <div id="urgent-fields"
+           class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 {% if form_data.is_urgent != 'on' %}hidden{% endif %}">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Urgency Category</label>
+          <select name="urgency_category">
+            <option value="">Select…</option>
+            {% for c in urgency_categories %}
+            <option value="{{ c }}" {% if form_data.urgency_category == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Requested Payment Date</label>
+          <input type="date" name="requested_payment_date" value="{{ form_data.requested_payment_date or '' }}">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Finance Authoriser</label>
+          <input type="text" name="finance_authoriser" value="{{ form_data.finance_authoriser or '' }}">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Urgency Reason</label>
+          <textarea name="urgency_reason" rows="2">{{ form_data.urgency_reason or '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-4">
+      <label class="block text-xs font-medium text-gray-600 mb-1">Step 2 — Upload your filled-in template</label>
+      <input type="file" name="file" accept=".xlsx" required class="text-sm">
+    </div>
+
+    <div class="flex flex-wrap justify-end gap-3 pt-2">
+      <a href="/submissions/new" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+        Use manual form instead
+      </a>
+      <button type="submit" class="btn-primary">Upload &amp; Create Submission</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

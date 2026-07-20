@@ -1,6 +1,7 @@
 """
 Finance QC routes:
   GET  /finance/queue                        — submissions pending QC
+  GET  /finance/tracker                       — submissions that reached Finance QC or beyond
   GET  /finance/submissions/{id}             — review detail
   POST /finance/submissions/{id}/approve     — pass to CFO
   POST /finance/submissions/{id}/query       — raise a query (status = qc_query_raised)
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.constants import STATUS_BADGE_COLOURS
 from app.database import get_db
 from app.dependencies import require_role
 from app.models.audit_log import AuditLog
@@ -22,6 +24,20 @@ from app.models.submission import Submission
 from app.models.user import User
 
 router = APIRouter(prefix="/finance", tags=["finance_qc"])
+
+# Statuses reachable only once a submission has entered (or passed) Finance QC.
+FINANCE_VISIBLE_STATUSES: list[str] = [
+    "pending_finance_qc",
+    "qc_query_raised",
+    "returned_for_revision",
+    "pending_cfo",
+    "declined_by_cfo",
+    "deferred_by_cfo",
+    "pending_ceo",
+    "declined_by_ceo",
+    "pending_treasury_payment",
+    "paid",
+]
 
 
 def _templates(request: Request):
@@ -67,6 +83,42 @@ async def finance_queue(
     return tmpl.TemplateResponse(
         "finance/queue.html",
         _ctx(request, user=current_user, pending=pending, reviewed=reviewed),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tracker — everything that has reached Finance QC or a later stage
+# ---------------------------------------------------------------------------
+
+@router.get("/tracker", response_class=HTMLResponse)
+async def finance_tracker(
+    request: Request,
+    current_user: User = Depends(require_role("finance_reviewer")),
+    db: Session = Depends(get_db),
+):
+    status_filter = request.query_params.get("status", "").strip()
+    search = request.query_params.get("q", "").strip()
+
+    q = db.query(Submission).filter(Submission.status.in_(FINANCE_VISIBLE_STATUSES))
+    if status_filter and status_filter in FINANCE_VISIBLE_STATUSES:
+        q = q.filter(Submission.status == status_filter)
+    if search:
+        q = q.filter(Submission.submission_id.ilike(f"%{search}%"))
+
+    submissions = q.order_by(Submission.created_at.desc()).limit(300).all()
+
+    tmpl = _templates(request)
+    return tmpl.TemplateResponse(
+        "finance/tracker.html",
+        _ctx(
+            request,
+            user=current_user,
+            submissions=submissions,
+            status_filter=status_filter,
+            search=search,
+            all_statuses=FINANCE_VISIBLE_STATUSES,
+            badge_colours=STATUS_BADGE_COLOURS,
+        ),
     )
 
 

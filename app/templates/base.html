@@ -73,20 +73,25 @@
 
           {% if role == "originator" %}
             <a href="/submissions/new"  class="nav-link">New Submission</a>
+            <a href="/submissions/batch-upload" class="nav-link">Batch Upload</a>
+            <a href="/submissions/bulk-import" class="nav-link">Bulk Import</a>
             <a href="/submissions/mine" class="nav-link">My Submissions</a>
           {% endif %}
 
           {% if role == "hod" %}
             <a href="/hod/queue"   class="nav-link">Pending Approvals</a>
+            <a href="/hod/tracker" class="nav-link">Tracker</a>
           {% endif %}
 
           {% if role == "finance_reviewer" %}
             <a href="/finance/queue"         class="nav-link">QC Queue</a>
+            <a href="/finance/tracker"       class="nav-link">Tracker</a>
             <a href="/submissions/urgent/new" class="nav-link">New Urgent</a>
           {% endif %}
 
           {% if role == "cfo" %}
             <a href="/cfo/queue"    class="nav-link">CFO Queue</a>
+            <a href="/cfo/tracker"  class="nav-link">Tracker</a>
           {% endif %}
 
           {% if role == "ceo" %}
@@ -131,16 +136,21 @@
       {% set role = user.role %}
       {% if role == "originator" %}
         <a href="/submissions/new"  class="mob-link">New</a>
+        <a href="/submissions/batch-upload" class="mob-link">Batch Upload</a>
+        <a href="/submissions/bulk-import" class="mob-link">Bulk Import</a>
         <a href="/submissions/mine" class="mob-link">Mine</a>
       {% endif %}
       {% if role == "hod" %}
         <a href="/hod/queue"   class="mob-link">Queue</a>
+        <a href="/hod/tracker" class="mob-link">Tracker</a>
       {% endif %}
       {% if role == "finance_reviewer" %}
         <a href="/finance/queue" class="mob-link">QC Queue</a>
+        <a href="/finance/tracker" class="mob-link">Tracker</a>
       {% endif %}
       {% if role == "cfo" %}
         <a href="/cfo/queue"  class="mob-link">CFO Queue</a>
+        <a href="/cfo/tracker" class="mob-link">Tracker</a>
       {% endif %}
       {% if role == "ceo" %}
         <a href="/ceo/queue"  class="mob-link">CEO Queue</a>

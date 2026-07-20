@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Bulk Import Result{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Bulk Import Result</h1>
+    <p class="mt-1 text-sm text-gray-500">
+      {{ created | length }} submission(s) created, {{ failures | length }} failed.
+    </p>
+  </div>
+
+  {% if created %}
+  <div class="card overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Created Submissions</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-50 border-b border-gray-100">
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Submission ID</th>
+          <th class="px-4 py-2.5"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for sid in created %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 font-mono font-semibold text-gray-900">{{ sid }}</td>
+          <td class="px-4 py-3 text-right">
+            <a href="/submissions/{{ sid }}" class="text-dblue hover:underline text-xs font-medium">View →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if failures %}
+  <div class="card overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-red-700 uppercase tracking-wide">Failed Batches</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-50 border-b border-gray-100">
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Batch Ref</th>
+          <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Error</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for f in failures %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 font-mono text-gray-700">{{ f.batch_ref }}</td>
+          <td class="px-4 py-3 text-red-700 text-xs">{{ f.error }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if not created and not failures %}
+  <p class="text-sm text-gray-500">No rows were found to import.</p>
+  {% endif %}
+
+  <a href="/submissions/mine" class="text-dblue hover:underline text-sm font-medium">← My Submissions</a>
+</div>
+{% endblock %}

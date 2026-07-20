@@ -3,6 +3,8 @@ Submission routes:
   GET  /submissions/new                 — originator submission form
   POST /submissions/new                 — create submission
   GET  /submissions/line-items/add      — HTMX add line-item row
+  GET  /submissions/batch-upload        — upload line items (xlsx) into one submission
+  GET  /submissions/bulk-import         — upload multiple submissions at once (xlsx)
   GET  /submissions/mine                — originator's own submissions
   GET  /submissions/{id}/confirmation   — post-submit success page
   GET  /submissions/{id}                — detail view
@@ -10,11 +12,12 @@ Submission routes:
 
 from __future__ import annotations
 
+import io
 import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -35,8 +38,19 @@ from app.schemas.submission import LineItemIn, SubmissionIn, UrgentSubmissionIn
 from app.models.line_item import LineItem
 from app.models.audit_log import AuditLog
 from app.services.submission_service import create_submission, convert_to_usd
+from app.services.batch_import_service import (
+    BULK_IMPORT_COLUMNS,
+    BULK_IMPORT_EXAMPLE,
+    LINE_ITEM_COLUMNS,
+    LINE_ITEM_EXAMPLE,
+    build_template_workbook,
+    coerce_line_item_row,
+    parse_uploaded_workbook,
+)
 
 logger = logging.getLogger(__name__)
+
+XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 router = APIRouter(prefix="/submissions", tags=["submissions"])
 
@@ -329,6 +343,282 @@ async def create_urgent_submission(
     return RedirectResponse(
         url=f"/submissions/{submission.submission_id}/confirmation",
         status_code=303,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Batch upload — many line items into ONE submission (xlsx)
+# ---------------------------------------------------------------------------
+
+def _format_line_item_validation_errors(exc: ValidationError, row_offset: int = 2) -> list[str]:
+    formatted: list[str] = []
+    for e in exc.errors():
+        loc = e["loc"]
+        if len(loc) >= 2 and loc[0] == "line_items" and isinstance(loc[1], int):
+            field = " → ".join(str(x) for x in loc[2:])
+            formatted.append(f"Row {loc[1] + row_offset} ({field}): {e['msg']}")
+        else:
+            formatted.append(f"{' → '.join(str(x) for x in loc)}: {e['msg']}")
+    return formatted
+
+
+@router.get("/batch-upload", response_class=HTMLResponse)
+async def batch_upload_form(
+    request: Request,
+    current_user: User = Depends(require_role("originator")),
+):
+    tmpl = _templates(request)
+    return tmpl.TemplateResponse(
+        "submissions/batch_upload.html",
+        _get_template_ctx(
+            request,
+            user=current_user,
+            department_groups=DEPARTMENT_GROUPS,
+            urgency_categories=URGENCY_CATEGORIES,
+            errors=None,
+            row_errors=None,
+            form_data={},
+        ),
+    )
+
+
+@router.get("/batch-upload/template")
+async def batch_upload_template(
+    current_user: User = Depends(require_role("originator")),
+):
+    content = build_template_workbook(LINE_ITEM_COLUMNS, example_row=LINE_ITEM_EXAMPLE)
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": "attachment; filename=cashcall_line_items_template.xlsx"},
+    )
+
+
+@router.post("/batch-upload", response_class=HTMLResponse)
+async def batch_upload_submit(
+    request: Request,
+    current_user: User = Depends(require_role("originator")),
+    db: Session = Depends(get_db),
+):
+    form = await request.form()
+    upload = form.get("file")
+    tmpl = _templates(request)
+    base_ctx = dict(
+        user=current_user,
+        department_groups=DEPARTMENT_GROUPS,
+        urgency_categories=URGENCY_CATEGORIES,
+        form_data={k: v for k, v in form.items() if k != "file"},
+    )
+
+    if upload is None or not getattr(upload, "filename", ""):
+        return tmpl.TemplateResponse(
+            "submissions/batch_upload.html",
+            _get_template_ctx(request, errors=["Please choose an .xlsx file to upload."], row_errors=None, **base_ctx),
+            status_code=422,
+        )
+
+    file_bytes = await upload.read()
+    raw_rows, parse_errors = parse_uploaded_workbook(file_bytes, LINE_ITEM_COLUMNS)
+    if parse_errors:
+        return tmpl.TemplateResponse(
+            "submissions/batch_upload.html",
+            _get_template_ctx(request, errors=parse_errors, row_errors=None, **base_ctx),
+            status_code=422,
+        )
+    if not raw_rows:
+        return tmpl.TemplateResponse(
+            "submissions/batch_upload.html",
+            _get_template_ctx(request, errors=["No data rows found in the uploaded file."], row_errors=None, **base_ctx),
+            status_code=422,
+        )
+
+    line_items: list[dict] = []
+    row_errors: list[str] = []
+    for i, raw in enumerate(raw_rows):
+        try:
+            line_items.append(coerce_line_item_row(raw))
+        except ValueError as exc:
+            row_errors.append(f"Row {i + 2}: {exc}")
+
+    is_urgent = form.get("is_urgent") == "on"
+    payload: dict[str, Any] = {
+        "department": form.get("department", ""),
+        "month": form.get("month", ""),
+        "year": form.get("year", ""),
+        "cost_type": form.get("cost_type", ""),
+        "supporting_justification": form.get("supporting_justification", ""),
+        "line_items": line_items,
+    }
+    if is_urgent:
+        payload.update({
+            "urgency_category": form.get("urgency_category", ""),
+            "urgency_reason": form.get("urgency_reason", ""),
+            "requested_payment_date": form.get("requested_payment_date", ""),
+            "finance_authoriser": form.get("finance_authoriser", ""),
+        })
+
+    submission_in: SubmissionIn | UrgentSubmissionIn | None = None
+    if not row_errors:
+        try:
+            submission_in = UrgentSubmissionIn(**payload) if is_urgent else SubmissionIn(**payload)
+        except ValidationError as exc:
+            row_errors.extend(_format_line_item_validation_errors(exc))
+
+    if row_errors or submission_in is None:
+        return tmpl.TemplateResponse(
+            "submissions/batch_upload.html",
+            _get_template_ctx(request, errors=None, row_errors=row_errors, **base_ctx),
+            status_code=422,
+        )
+
+    try:
+        submission = create_submission(submission_in, current_user, db)
+    except ValueError as exc:
+        return tmpl.TemplateResponse(
+            "submissions/batch_upload.html",
+            _get_template_ctx(request, errors=[str(exc)], row_errors=None, **base_ctx),
+            status_code=422,
+        )
+
+    return RedirectResponse(url=f"/submissions/{submission.submission_id}/confirmation", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Bulk import — MULTIPLE submissions at once, grouped by "Batch Ref" (xlsx)
+# ---------------------------------------------------------------------------
+
+@router.get("/bulk-import", response_class=HTMLResponse)
+async def bulk_import_form(
+    request: Request,
+    current_user: User = Depends(require_role("originator")),
+):
+    tmpl = _templates(request)
+    return tmpl.TemplateResponse(
+        "submissions/bulk_import.html",
+        _get_template_ctx(request, user=current_user, errors=None),
+    )
+
+
+@router.get("/bulk-import/template")
+async def bulk_import_template(
+    current_user: User = Depends(require_role("originator")),
+):
+    content = build_template_workbook(BULK_IMPORT_COLUMNS, example_row=BULK_IMPORT_EXAMPLE)
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": "attachment; filename=cashcall_bulk_import_template.xlsx"},
+    )
+
+
+@router.post("/bulk-import", response_class=HTMLResponse)
+async def bulk_import_submit(
+    request: Request,
+    current_user: User = Depends(require_role("originator")),
+    db: Session = Depends(get_db),
+):
+    form = await request.form()
+    upload = form.get("file")
+    tmpl = _templates(request)
+
+    if upload is None or not getattr(upload, "filename", ""):
+        return tmpl.TemplateResponse(
+            "submissions/bulk_import.html",
+            _get_template_ctx(request, user=current_user, errors=["Please choose an .xlsx file to upload."]),
+            status_code=422,
+        )
+
+    file_bytes = await upload.read()
+    raw_rows, parse_errors = parse_uploaded_workbook(file_bytes, BULK_IMPORT_COLUMNS)
+    if parse_errors:
+        return tmpl.TemplateResponse(
+            "submissions/bulk_import.html",
+            _get_template_ctx(request, user=current_user, errors=parse_errors),
+            status_code=422,
+        )
+    if not raw_rows:
+        return tmpl.TemplateResponse(
+            "submissions/bulk_import.html",
+            _get_template_ctx(request, user=current_user, errors=["No data rows found in the uploaded file."]),
+            status_code=422,
+        )
+
+    # Group rows by Batch Ref, preserving first-seen order.
+    groups: dict[str, list[dict]] = {}
+    order: list[str] = []
+    for i, raw in enumerate(raw_rows):
+        ref = str(raw.get("batch_ref") or "").strip()
+        if not ref:
+            ref = f"(ungrouped row {i + 2})"
+        if ref not in groups:
+            groups[ref] = []
+            order.append(ref)
+        groups[ref].append({**raw, "_excel_row": i + 2})
+
+    created: list[str] = []
+    failures: list[dict[str, str]] = []
+
+    for ref in order:
+        group_rows = groups[ref]
+        first = group_rows[0]
+
+        mismatch = None
+        for key in ("department", "month", "year", "cost_type"):
+            values = {str(r.get(key)).strip() for r in group_rows}
+            if len(values) > 1:
+                mismatch = key
+                break
+        if mismatch:
+            failures.append({
+                "batch_ref": ref,
+                "error": f'Rows disagree on "{mismatch}" — all rows sharing a Batch Ref must have the same {mismatch}.',
+            })
+            continue
+
+        line_items: list[dict] = []
+        row_errors: list[str] = []
+        for r in group_rows:
+            try:
+                line_items.append(coerce_line_item_row(r))
+            except ValueError as exc:
+                row_errors.append(f"Row {r['_excel_row']}: {exc}")
+
+        payload = {
+            "department": str(first.get("department") or "").strip(),
+            "month": str(first.get("month") or "").strip(),
+            "year": str(first.get("year") or "").strip(),
+            "cost_type": str(first.get("cost_type") or "").strip().lower(),
+            "supporting_justification": str(first.get("supporting_justification") or "").strip(),
+            "line_items": line_items,
+        }
+
+        submission_in: SubmissionIn | None = None
+        if not row_errors:
+            try:
+                submission_in = SubmissionIn(**payload)
+            except ValidationError as exc:
+                for e in exc.errors():
+                    loc = e["loc"]
+                    if len(loc) >= 2 and loc[0] == "line_items" and isinstance(loc[1], int):
+                        excel_row = group_rows[loc[1]]["_excel_row"]
+                        field = " → ".join(str(x) for x in loc[2:])
+                        row_errors.append(f"Row {excel_row} ({field}): {e['msg']}")
+                    else:
+                        row_errors.append(f"{' → '.join(str(x) for x in loc)}: {e['msg']}")
+
+        if row_errors or submission_in is None:
+            failures.append({"batch_ref": ref, "error": "; ".join(row_errors)})
+            continue
+
+        try:
+            submission = create_submission(submission_in, current_user, db)
+            created.append(submission.submission_id)
+        except ValueError as exc:
+            failures.append({"batch_ref": ref, "error": str(exc)})
+
+    return tmpl.TemplateResponse(
+        "submissions/bulk_import_result.html",
+        _get_template_ctx(request, user=current_user, created=created, failures=failures),
     )
 
 
