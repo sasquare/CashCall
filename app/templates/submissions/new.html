@@ -166,11 +166,7 @@
       {# Add line item button #}
       <button type="button"
               id="add-li-btn"
-              hx-get="/submissions/line-items/add"
-              hx-include="#li-next-idx"
-              hx-target="#line-items-container"
-              hx-swap="beforeend"
-              hx-on::after-request="incrementLineCount()"
+              onclick="addLineItem()"
               class="mt-4 flex items-center gap-2 rounded-lg border border-dashed border-green-600 px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-50 transition-colors w-full justify-center">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -178,8 +174,12 @@
         Add Line Item
       </button>
 
-      {# Hidden input to track next index for HTMX #}
-      <input type="hidden" id="li-next-idx" name="next_line_idx" value="{{ line_item_rows | length }}">
+      {# Hidden template used to clone new rows client-side — index placeholder "__IDX__" #}
+      <template id="li-row-template">
+        {% set idx = "__IDX__" %}
+        {% set row = {} %}
+        {% include "submissions/_line_item_row.html" %}
+      </template>
     </div>
 
     {# ── Actions ─────────────────────────────────────────────────────── #}
@@ -197,44 +197,5 @@
   </form>
 </div>
 
-<script>
-  // Track number of line item rows for the counter + next-idx input
-  function getRowCount() {
-    return document.querySelectorAll('#line-items-container .li-row').length;
-  }
-
-  function updateCounter() {
-    const count = getRowCount();
-    document.getElementById('li-counter').textContent = count + ' / 10';
-    document.getElementById('li-next-idx').value = count;
-    const btn = document.getElementById('add-li-btn');
-    if (count >= 10) {
-      btn.disabled = true;
-      btn.classList.add('opacity-50', 'cursor-not-allowed');
-    } else {
-      btn.disabled = false;
-      btn.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-  }
-
-  function incrementLineCount() {
-    updateCounter();
-  }
-
-  function recountRows() {
-    updateCounter();
-  }
-
-  function toggleArrearType(idx, checked) {
-    const wrap = document.getElementById('arrear_type_wrap_' + idx);
-    if (wrap) {
-      wrap.classList.toggle('hidden', !checked);
-      const sel = wrap.querySelector('select');
-      if (sel) sel.required = checked;
-    }
-  }
-
-  // Set initial counter
-  updateCounter();
-</script>
+<script src="/static/line-items.js"></script>
 {% endblock %}

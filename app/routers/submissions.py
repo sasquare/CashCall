@@ -2,7 +2,6 @@
 Submission routes:
   GET  /submissions/new                 — originator submission form
   POST /submissions/new                 — create submission
-  GET  /submissions/line-items/add      — HTMX add line-item row
   GET  /submissions/batch-upload        — upload line items (xlsx) into one submission
   GET  /submissions/bulk-import         — upload multiple submissions at once (xlsx)
   GET  /submissions/mine                — originator's own submissions
@@ -105,31 +104,6 @@ def _parse_line_items_from_form(form: dict) -> list[dict]:
             "arrear_type": form.get(f"arrear_type_{i}") or None,
         })
     return items
-
-
-# ---------------------------------------------------------------------------
-# HTMX: add line-item row
-# ---------------------------------------------------------------------------
-
-@router.get("/line-items/add", response_class=HTMLResponse)
-async def add_line_item_row(
-    request: Request,
-    next_line_idx: int = 0,
-    current_user: User = Depends(require_role("originator")),
-):
-    tmpl = _templates(request)
-    return tmpl.TemplateResponse(
-        "submissions/_line_item_row.html",
-        _get_template_ctx(
-            request,
-            idx=next_line_idx,
-            categories=CASH_CALL_CATEGORIES,
-            currencies=CURRENCIES,
-            frequencies=PAYMENT_FREQUENCIES,
-            arrear_types=ARREAR_TYPES,
-            row={},
-        ),
-    )
 
 
 # ---------------------------------------------------------------------------
