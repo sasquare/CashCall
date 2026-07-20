@@ -1,112 +1,330 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In — DPRP Cash Call</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23003087'/><text x='16' y='22' font-size='16' font-weight='bold' text-anchor='middle' fill='white' font-family='sans-serif'>D</text></svg>">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { margin:0; font-family:ui-sans-serif,system-ui,sans-serif; }
-    .page-wrap { min-height:100vh; display:flex; }
-    .left-panel {
-      display:none;
-      flex:1;
-      background:linear-gradient(160deg,#003087 0%,#00205a 60%,#001439 100%);
-      position:relative;
-      overflow:hidden;
-      align-items:center;
-      justify-content:center;
-      padding:3rem;
-    }
-    @media(min-width:900px){ .left-panel { display:flex; flex-direction:column; } }
-    .left-panel::before {
-      content:'';
-      position:absolute;
-      top:-80px; right:-80px;
-      width:350px; height:350px;
-      border-radius:50%;
-      background:rgba(255,255,255,0.04);
-    }
-    .left-panel::after {
-      content:'';
-      position:absolute;
-      bottom:-120px; left:-60px;
-      width:420px; height:420px;
-      border-radius:50%;
-      background:rgba(204,0,0,0.08);
-    }
-    .right-panel {
-      width:100%;
-      max-width:480px;
-      margin:auto;
-      background:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:3rem 2rem;
-    }
-    @media(min-width:900px){ .right-panel { box-shadow:-4px 0 30px rgba(0,0,0,0.1); min-height:100vh; } }
-    input { border:1px solid #d1d5db; border-radius:0.5rem; padding:0.625rem 0.875rem; font-size:0.9rem; width:100%; outline:none; transition:border-color 0.15s,box-shadow 0.15s; box-sizing:border-box; }
-    input:focus { border-color:#003087; box-shadow:0 0 0 3px rgba(0,48,135,0.12); }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign In — DPRP Cash Call</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23003B8E'/><text x='16' y='22' font-size='16' font-weight='bold' text-anchor='middle' fill='white' font-family='sans-serif'>D</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --primary:#003B8E;
+    --secondary:#0E4DA4;
+    --accent:#1F6FEB;
+    --bg:#F7F9FC;
+    --success:#16A34A;
+    --error:#DC2626;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    background:var(--bg);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Layout ---------- */
+  .shell{
+    min-height:100vh;
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  @media (min-width:1024px){
+    .shell{ grid-template-columns:55fr 45fr; }
+  }
+
+  /* ---------- Hero / left panel ---------- */
+  .hero{
+    position:relative;
+    display:none;
+    overflow:hidden;
+    background:
+      radial-gradient(120% 120% at 15% 10%, #0E4DA4 0%, transparent 55%),
+      radial-gradient(120% 120% at 90% 90%, #001A47 0%, transparent 55%),
+      linear-gradient(160deg,#00297a 0%,#001439 100%);
+    padding:4rem 3.5rem;
+    flex-direction:column;
+    justify-content:center;
+  }
+  @media (min-width:1024px){ .hero{ display:flex; } }
+
+  .hero-noise{
+    position:absolute; inset:0; z-index:0; opacity:.05; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .blob{ position:absolute; border-radius:50%; filter:blur(70px); z-index:0; will-change:transform; }
+  .blob-1{ width:420px; height:420px; top:-140px; right:-120px; background:radial-gradient(circle,rgba(31,111,235,.55),transparent 70%); animation:float1 22s ease-in-out infinite; }
+  .blob-2{ width:360px; height:360px; bottom:-140px; left:-100px; background:radial-gradient(circle,rgba(14,77,164,.55),transparent 70%); animation:float2 26s ease-in-out infinite; }
+  .blob-3{ width:260px; height:260px; bottom:20%; right:8%; background:radial-gradient(circle,rgba(255,255,255,.10),transparent 70%); animation:float3 18s ease-in-out infinite; }
+
+  @keyframes float1{ 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(-40px,50px) scale(1.08);} }
+  @keyframes float2{ 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(30px,-40px) scale(1.05);} }
+  @keyframes float3{ 0%,100%{transform:translate(0,0);} 50%{transform:translate(-25px,-25px);} }
+
+  .hero-inner{ position:relative; z-index:1; max-width:560px; margin:0 auto; width:100%; }
+
+  .glass-chip{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+
+  .feature-card{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-radius:16px;
+    padding:14px 16px;
+    display:flex; align-items:center; gap:12px;
+    transition:background .2s ease, transform .2s ease, border-color .2s ease;
+  }
+  .feature-card:hover{ background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.20); transform:translateY(-2px); }
+
+  .feature-icon{
+    flex-shrink:0; width:38px; height:38px; border-radius:11px;
+    background:linear-gradient(135deg,rgba(31,111,235,.35),rgba(31,111,235,.10));
+    border:1px solid rgba(31,111,235,.35);
+    display:flex; align-items:center; justify-content:center;
+    color:#8fb8ff;
+  }
+
+  .stat-card{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-radius:16px;
+    padding:16px 14px;
+    text-align:left;
+  }
+  .stat-number{ font-size:1.5rem; font-weight:800; color:#fff; letter-spacing:-0.02em; line-height:1.1; }
+  .stat-label{ font-size:.72rem; color:#9db8e8; margin-top:2px; font-weight:500; }
+
+  /* ---------- Right panel ---------- */
+  .panel-right{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:2.5rem 1.5rem;
+    overflow:hidden;
+  }
+  .panel-right .bg-blob{
+    position:absolute; border-radius:50%; filter:blur(90px); z-index:0; opacity:.35;
+  }
+  .panel-right .bg-blob-a{ width:380px; height:380px; top:-120px; left:-120px; background:radial-gradient(circle,rgba(31,111,235,.25),transparent 70%); }
+  .panel-right .bg-blob-b{ width:340px; height:340px; bottom:-120px; right:-100px; background:radial-gradient(circle,rgba(0,59,142,.20),transparent 70%); }
+
+  .auth-card{
+    position:relative; z-index:1;
+    width:100%; max-width:460px;
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(255,255,255,.6);
+    border-radius:28px;
+    box-shadow:0 20px 60px -15px rgba(0,20,57,.25), 0 4px 20px rgba(0,20,57,.06);
+    backdrop-filter:blur(24px);
+    -webkit-backdrop-filter:blur(24px);
+    padding:2.75rem 2.25rem;
+  }
+
+  /* ---------- Inputs ---------- */
+  .field-label{ display:block; font-size:.8rem; font-weight:600; color:#1e2a44; margin-bottom:.4rem; }
+  .field-wrap{ position:relative; }
+  .field-icon{
+    position:absolute; left:18px; top:50%; transform:translateY(-50%);
+    color:#94a3b8; pointer-events:none; transition:color .2s ease;
+  }
+  .field-input{
+    width:100%; height:58px; border-radius:16px;
+    border:1.5px solid #e2e8f0;
+    background:#fff;
+    padding:0 18px 0 50px;
+    font-size:.95rem; color:#0f172a;
+    outline:none;
+    box-shadow:0 1px 2px rgba(15,23,42,.04);
+    transition:border-color .2s ease, box-shadow .2s ease, transform .15s ease;
+  }
+  .field-input:hover{ border-color:#cbd5e1; }
+  .field-input:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 4px rgba(31,111,235,.14);
+  }
+  .field-wrap:focus-within .field-icon{ color:var(--accent); }
+  .field-toggle{
+    position:absolute; right:14px; top:50%; transform:translateY(-50%);
+    color:#94a3b8; background:none; border:none; cursor:pointer; padding:6px;
+    border-radius:8px; transition:color .15s ease, background .15s ease;
+  }
+  .field-toggle:hover{ color:#1e2a44; background:#f1f5f9; }
+
+  /* ---------- Buttons ---------- */
+  .btn-signin{
+    position:relative; overflow:hidden;
+    width:100%; height:56px; border:none; border-radius:16px; cursor:pointer;
+    background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 55%,var(--accent) 130%);
+    color:#fff; font-weight:700; font-size:.95rem; letter-spacing:.01em;
+    box-shadow:0 10px 24px -8px rgba(0,59,142,.55);
+    transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    display:flex; align-items:center; justify-content:center; gap:.6rem;
+  }
+  .btn-signin:hover{ transform:translateY(-2px); box-shadow:0 16px 32px -10px rgba(0,59,142,.6); filter:brightness(1.04); }
+  .btn-signin:active{ transform:translateY(0); }
+  .btn-signin:disabled{ opacity:.75; cursor:progress; transform:none; }
+
+  .ripple{
+    position:absolute; border-radius:50%; background:rgba(255,255,255,.55);
+    transform:scale(0); animation:ripple-anim .6s ease-out forwards; pointer-events:none;
+  }
+  @keyframes ripple-anim{ to{ transform:scale(3.2); opacity:0; } }
+
+  .spinner{
+    width:18px; height:18px; border-radius:50%;
+    border:2.5px solid rgba(255,255,255,.4); border-top-color:#fff;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .btn-ms{
+    width:100%; height:56px; border-radius:16px;
+    border:1.5px solid #e2e8f0; background:#fff; color:#1e2a44;
+    font-weight:600; font-size:.9rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:.7rem;
+    transition:background .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+    text-decoration:none;
+  }
+  .btn-ms:hover{ background:#f8fafc; border-color:#cbd5e1; transform:translateY(-1px); box-shadow:0 6px 16px -6px rgba(15,23,42,.15); }
+  .btn-ms[aria-disabled="true"]{ opacity:.55; cursor:not-allowed; pointer-events:none; }
+
+  /* ---------- Divider ---------- */
+  .divider{ display:flex; align-items:center; gap:.85rem; margin:1.5rem 0; }
+  .divider::before,.divider::after{ content:''; flex:1; height:1px; background:#e2e8f0; }
+  .divider span{ font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#94a3b8; }
+
+  /* ---------- Checkbox ---------- */
+  .chk{ width:18px; height:18px; border-radius:6px; border:1.5px solid #cbd5e1; cursor:pointer; accent-color:var(--primary); }
+
+  /* ---------- Entrance animations ---------- */
+  .fade-up{ opacity:0; transform:translateY(16px); animation:fadeUp .6s cubic-bezier(.16,.9,.3,1) forwards; }
+  .fade-in{ opacity:0; animation:fadeIn .7s ease forwards; }
+  @keyframes fadeUp{ to{ opacity:1; transform:translateY(0);} }
+  @keyframes fadeIn{ to{ opacity:1; } }
+  .d1{ animation-delay:.05s; } .d2{ animation-delay:.12s; } .d3{ animation-delay:.18s; }
+  .d4{ animation-delay:.24s; } .d5{ animation-delay:.30s; } .d6{ animation-delay:.36s; }
+
+  @media (prefers-reduced-motion: reduce){
+    .blob-1,.blob-2,.blob-3{ animation:none !important; }
+    .fade-up,.fade-in{ animation:none !important; opacity:1 !important; transform:none !important; }
+    .btn-signin,.feature-card,.btn-ms{ transition:none !important; }
+  }
+</style>
 </head>
 <body>
-<div class="page-wrap">
+<div class="shell">
 
-  {# Left decorative panel #}
-  <div class="left-panel">
-    <div style="position:relative;z-index:1;text-align:center;">
-      <img src="/static/dangote-logo.svg" alt="Dangote" style="height:70px;margin:0 auto 1.5rem;display:block;" onerror="this.style.display='none'">
-      <h1 style="color:#fff;font-size:2rem;font-weight:800;margin:0 0 0.5rem;letter-spacing:-0.02em;">DPRP Cash Call</h1>
-      <p style="color:#7fa8d8;font-size:1rem;margin:0 0 3rem;">Dangote Petroleum Refinery &amp; Petrochemicals FZE</p>
-      <div style="display:flex;flex-direction:column;gap:1.25rem;text-align:left;">
-        {% for label in ["5-stage digital approval workflow","Real-time submission tracking","Multi-currency support (USD, NGN, EUR, GBP, INR)","Full audit trail & reporting"] %}
-        <div style="display:flex;align-items:center;gap:0.875rem;">
-          <div style="width:2rem;height:2rem;border-radius:50%;background:rgba(204,0,0,0.25);border:1px solid rgba(204,0,0,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg style="width:1rem;height:1rem;color:#ff8080;" fill="none" viewBox="0 0 24 24" stroke="#ff9999" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-          </div>
-          <span style="color:#c5d9f5;font-size:0.9rem;">{{ label }}</span>
-        </div>
-        {% endfor %}
+  {# ============================= LEFT — HERO / BRANDING ============================= #}
+  <div class="hero">
+    <div class="hero-noise"></div>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="hero-inner">
+
+      <div class="fade-up d1" style="display:flex;align-items:center;gap:14px;margin-bottom:2.25rem;">
+        <img src="/static/dangote-logo.svg" alt="Dangote" style="height:42px;" onerror="this.style.display='none'">
+        <div style="width:1px;height:32px;background:rgba(255,255,255,.18);"></div>
+        <span style="color:#bcd0f5;font-size:.78rem;font-weight:600;letter-spacing:.03em;">DANGOTE PETROLEUM<br>REFINERY &amp; PETROCHEMICALS</span>
       </div>
+
+      <h1 class="fade-up d2" style="color:#fff;font-size:clamp(2.1rem,3vw,2.75rem);font-weight:800;letter-spacing:-0.025em;line-height:1.08;margin:0 0 .75rem;">
+        DPRP Cash Call
+      </h1>
+      <p class="fade-up d2" style="color:#a9c3ee;font-size:1.05rem;font-weight:400;margin:0 0 2.5rem;max-width:440px;">
+        Enterprise Cash Call Approval Platform
+      </p>
+
+      <div class="fade-up d3" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:2rem;">
+        <div class="feature-card">
+          <div class="feature-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12a3 3 0 0 0 3 3h9"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/></svg></div>
+          <span style="color:#dbe6fb;font-size:.82rem;font-weight:500;">Multi-Level Approval Workflow</span>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V6l-8-3-8 3v6c0 5 3.4 7.4 8 9 4.6-1.6 8-4 8-9Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <span style="color:#dbe6fb;font-size:.82rem;font-weight:500;">Audit Trail &amp; Compliance</span>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+          <span style="color:#dbe6fb;font-size:.82rem;font-weight:500;">Real-time Approval Tracking</span>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg></div>
+          <span style="color:#dbe6fb;font-size:.82rem;font-weight:500;">Multi-Currency Support</span>
+        </div>
+      </div>
+
+      <div class="fade-up d4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-number" data-count-to="5">0</div>
+          <div class="stat-label">Approval Stages</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" data-count-to="5">0</div>
+          <div class="stat-label">Currencies Supported</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" data-count-to="100" data-suffix="%">0%</div>
+          <div class="stat-label">Actions Audit-Logged</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" style="font-size:1.15rem;">24/7</div>
+          <div class="stat-label">Platform Access</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  {# Right login panel #}
-  <div class="right-panel">
-    <div style="width:100%;">
+  {# ============================= RIGHT — AUTH CARD ============================= #}
+  <div class="panel-right">
+    <div class="bg-blob bg-blob-a"></div>
+    <div class="bg-blob bg-blob-b"></div>
 
-      {# Mobile logo (shown only on small screens) #}
-      <div style="text-align:center;margin-bottom:2rem;" class="block lg:hidden">
-        <img src="/static/dangote-logo.svg" alt="Dangote" style="height:50px;margin:0 auto 1rem;display:block;" onerror="this.style.display='none'">
-        <h1 style="color:#003087;font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;">DPRP Cash Call</h1>
-        <p style="color:#6b7280;font-size:0.875rem;margin:0;">Dangote Petroleum Refinery</p>
+    <div class="auth-card fade-up d1">
+
+      {# Mobile-only compact brand header #}
+      <div class="lg:hidden" style="text-align:center;margin-bottom:1.75rem;">
+        <img src="/static/dangote-logo.svg" alt="Dangote" style="height:44px;margin:0 auto .75rem;display:block;" onerror="this.style.display='none'">
+        <h1 style="color:var(--primary);font-size:1.35rem;font-weight:800;margin:0;letter-spacing:-0.02em;">DPRP Cash Call</h1>
+        <p style="color:#64748b;font-size:.82rem;margin:.2rem 0 0;">Dangote Petroleum Refinery</p>
       </div>
 
       <div style="margin-bottom:1.75rem;">
-        <h2 style="color:#003087;font-size:1.4rem;font-weight:700;margin:0 0 0.25rem;">Welcome back</h2>
-        <p style="color:#6b7280;font-size:0.875rem;margin:0;">Sign in to your account to continue</p>
+        <h2 style="color:#0f172a;font-size:1.65rem;font-weight:800;margin:0 0 .35rem;letter-spacing:-0.02em;">Welcome back</h2>
+        <p style="color:#64748b;font-size:.9rem;margin:0;">Sign in to access the DPRP Cash Call platform</p>
       </div>
 
-      {# Error banner #}
       {% if error %}
-      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:0.5rem;padding:0.75rem 1rem;margin-bottom:1.25rem;">
-        <p style="color:#991b1b;font-size:0.875rem;margin:0;">
+      <div role="alert" style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:.85rem 1rem;margin-bottom:1.25rem;display:flex;gap:.65rem;align-items:flex-start;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p style="color:#991b1b;font-size:.85rem;margin:0;line-height:1.4;">
           {% if error == "auth_failed" %}Authentication failed. Check your credentials or contact IT Admin.
-          {% elif error == "azure_not_configured" %}Microsoft login is not configured. Use dev login below.
+          {% elif error == "azure_not_configured" %}Microsoft login is not configured. Use email sign-in below.
           {% elif error == "dev_disabled" %}Developer login is not available in this environment.
           {% else %}{{ error }}{% endif %}
         </p>
       </div>
       {% endif %}
 
-      {# Microsoft SSO #}
       {% if azure_configured %}
-      <a href="/login/microsoft"
-         style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.75rem;font-size:0.875rem;font-weight:500;color:#374151;background:#fff;text-decoration:none;transition:background 0.15s,border-color 0.15s;box-sizing:border-box;margin-bottom:1.5rem;"
-         onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
-        <svg style="width:1.25rem;height:1.25rem;flex-shrink:0;" viewBox="0 0 21 21" fill="none">
+      <a href="/login/microsoft" class="btn-ms" aria-label="Sign in with Microsoft 365">
+        <svg width="20" height="20" viewBox="0 0 21 21" fill="none" aria-hidden="true">
           <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
           <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
           <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
@@ -115,48 +333,66 @@
         Sign in with Microsoft 365
       </a>
       {% else %}
-      <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.75rem;font-size:0.875rem;color:#9ca3af;background:#f9fafb;cursor:not-allowed;box-sizing:border-box;margin-bottom:1.5rem;">
-        <svg style="width:1.25rem;height:1.25rem;flex-shrink:0;" viewBox="0 0 21 21" fill="none">
-          <rect x="1" y="1" width="9" height="9" fill="#ddd"/>
-          <rect x="11" y="1" width="9" height="9" fill="#ddd"/>
-          <rect x="1" y="11" width="9" height="9" fill="#ddd"/>
-          <rect x="11" y="11" width="9" height="9" fill="#ddd"/>
+      <div class="btn-ms" aria-disabled="true">
+        <svg width="20" height="20" viewBox="0 0 21 21" fill="none" aria-hidden="true">
+          <rect x="1" y="1" width="9" height="9" fill="#dde3ea"/>
+          <rect x="11" y="1" width="9" height="9" fill="#dde3ea"/>
+          <rect x="1" y="11" width="9" height="9" fill="#dde3ea"/>
+          <rect x="11" y="11" width="9" height="9" fill="#dde3ea"/>
         </svg>
         Microsoft 365 (not configured)
       </div>
       {% endif %}
 
-      {# Password login form — shown when Azure SSO not configured or in dev mode #}
       {% if show_password_form %}
-      <div style="position:relative;margin-bottom:1.25rem;">
-        <div style="position:absolute;inset:0;display:flex;align-items:center;"><div style="width:100%;border-top:1px solid #e5e7eb;"></div></div>
-        <div style="position:relative;display:flex;justify-content:center;">
-          <span style="background:#fff;padding:0 0.75rem;font-size:0.8rem;color:{% if dev_mode %}#d97706{% else %}#6b7280{% endif %};font-weight:600;">{% if dev_mode %}Dev login{% else %}Sign in with email{% endif %}</span>
-        </div>
-      </div>
+      <div class="divider"><span>{% if dev_mode %}Dev login{% else %}Sign in with email{% endif %}</span></div>
 
-      <form action="/login/dev" method="post" style="display:flex;flex-direction:column;gap:1rem;">
+      <form action="/login/dev" method="post" id="loginForm" style="display:flex;flex-direction:column;gap:1.1rem;">
         <div>
-          <label style="display:block;font-size:0.8rem;font-weight:600;color:#003087;margin-bottom:0.375rem;">Email</label>
-          <input type="email" name="email" required autocomplete="email"
-                 value="{{ prefill_email or '' }}"
-                 placeholder="e.g. cfo@dangote.com">
+          <label class="field-label" for="email">Email address</label>
+          <div class="field-wrap">
+            <span class="field-icon" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m2 7 9.3 6.2a2 2 0 0 0 2.4 0L23 7"/></svg>
+            </span>
+            <input class="field-input" type="email" id="email" name="email" required autocomplete="email"
+                   value="{{ prefill_email or '' }}" placeholder="e.g. cfo@dangote.com" aria-required="true">
+          </div>
         </div>
+
         <div>
-          <label style="display:block;font-size:0.8rem;font-weight:600;color:#003087;margin-bottom:0.375rem;">Password</label>
-          <input type="password" name="password" required autocomplete="current-password">
+          <label class="field-label" for="password">Password</label>
+          <div class="field-wrap">
+            <span class="field-icon" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <input class="field-input" style="padding-right:48px;" type="password" id="password" name="password" required
+                   autocomplete="current-password" aria-required="true">
+            <button type="button" class="field-toggle" id="togglePw" aria-label="Show password" aria-pressed="false">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
-        <button type="submit"
-                style="width:100%;background:#003087;color:#fff;padding:0.75rem;border-radius:0.5rem;font-weight:700;font-size:0.9rem;border:none;cursor:pointer;transition:background 0.15s;letter-spacing:0.01em;"
-                onmouseover="this.style.background='#0042b8'" onmouseout="this.style.background='#003087'">
-          Sign in
+
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <label style="display:flex;align-items:center;gap:.55rem;font-size:.82rem;color:#475569;cursor:pointer;">
+            <input type="checkbox" name="remember_me" class="chk">
+            Remember me
+          </label>
+          <a href="mailto:it.admin@dangote.com?subject=DPRP%20Cash%20Call%20—%20Password%20assistance"
+             style="font-size:.82rem;font-weight:600;color:var(--accent);text-decoration:none;">
+            Forgot password?
+          </a>
+        </div>
+
+        <button type="submit" class="btn-signin" id="submitBtn">
+          <span id="submitLabel">Sign In</span>
         </button>
       </form>
 
       {% if dev_mode %}
-      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:0.5rem;padding:0.875rem;margin-top:1.25rem;">
-        <p style="font-size:0.75rem;font-weight:700;color:#92400e;margin:0 0 0.5rem;">Development Credentials</p>
-        <div style="font-size:0.72rem;font-family:monospace;color:#b45309;display:flex;flex-direction:column;gap:0.2rem;">
+      <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:16px;padding:1rem;margin-top:1.5rem;">
+        <p style="font-size:.72rem;font-weight:800;color:#92400e;margin:0 0 .5rem;letter-spacing:.03em;text-transform:uppercase;">Development Credentials</p>
+        <div style="font-size:.72rem;font-family:ui-monospace,'SF Mono',Menlo,monospace;color:#92400e;display:flex;flex-direction:column;gap:.22rem;">
           <div>cfo@dangote.com / CFO@12345</div>
           <div>ceo@dangote.com / CEO@12345</div>
           <div>hod.it@dangote.com / HOD@12345</div>
@@ -169,13 +405,83 @@
       {% endif %}
       {% endif %}
 
-      <p style="text-align:center;font-size:0.75rem;color:#9ca3af;margin-top:1.5rem;">
-        Access issues? Contact <a href="mailto:it.admin@dangote.com" style="color:#003087;font-weight:600;">IT Admin</a>
-      </p>
+      <div style="margin-top:1.75rem;padding-top:1.25rem;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+        <p style="font-size:.78rem;color:#94a3b8;margin:0;">
+          Need help? <a href="mailto:it.admin@dangote.com" style="color:var(--primary);font-weight:600;text-decoration:none;">Contact IT</a>
+        </p>
+        <span style="font-size:.72rem;color:#cbd5e1;font-weight:600;">v1.0</span>
+      </div>
 
     </div>
   </div>
 
 </div>
+
+<script>
+  // Password show/hide toggle
+  (function(){
+    var toggle = document.getElementById('togglePw');
+    var pw = document.getElementById('password');
+    if (!toggle || !pw) return;
+    toggle.addEventListener('click', function(){
+      var isHidden = pw.type === 'password';
+      pw.type = isHidden ? 'text' : 'password';
+      toggle.setAttribute('aria-pressed', String(isHidden));
+      toggle.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    });
+  })();
+
+  // Ripple + loading state on sign-in button
+  (function(){
+    var btn = document.getElementById('submitBtn');
+    var label = document.getElementById('submitLabel');
+    var form = document.getElementById('loginForm');
+    if (!btn || !form) return;
+
+    btn.addEventListener('click', function(e){
+      var rect = btn.getBoundingClientRect();
+      var size = Math.max(rect.width, rect.height);
+      var circle = document.createElement('span');
+      circle.className = 'ripple';
+      circle.style.width = circle.style.height = size + 'px';
+      circle.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      circle.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      btn.appendChild(circle);
+      setTimeout(function(){ circle.remove(); }, 650);
+    });
+
+    form.addEventListener('submit', function(){
+      btn.disabled = true;
+      label.innerHTML = '';
+      var spinner = document.createElement('span');
+      spinner.className = 'spinner';
+      label.appendChild(spinner);
+      label.insertAdjacentText('beforeend', ' Signing in…');
+    });
+  })();
+
+  // Animated stat counters
+  (function(){
+    var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var nodes = document.querySelectorAll('[data-count-to]');
+    if (!nodes.length) return;
+
+    function animate(el){
+      var target = parseFloat(el.getAttribute('data-count-to'));
+      var suffix = el.getAttribute('data-suffix') || '';
+      if (prefersReduced){ el.textContent = target + suffix; return; }
+      var start = performance.now();
+      var duration = 1100;
+      function step(now){
+        var p = Math.min((now - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(target * eased) + suffix;
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    setTimeout(function(){ nodes.forEach(animate); }, 500);
+  })();
+</script>
 </body>
 </html>
