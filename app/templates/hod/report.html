@@ -27,7 +27,7 @@
   </div>
 
   {# KPI Summary Cards — counted per LINE ITEM, since items now move independently #}
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
 
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
       <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Submissions</p>
@@ -43,6 +43,11 @@
     <div class="bg-white rounded-xl border border-amber-200 shadow-sm p-4 text-center">
       <p class="text-xs text-amber-600 uppercase tracking-wide mb-1">Items Pending</p>
       <p class="text-3xl font-bold text-amber-600">{{ pending }}</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-purple-200 shadow-sm p-4 text-center">
+      <p class="text-xs text-purple-600 uppercase tracking-wide mb-1">Deferred / Clarification</p>
+      <p class="text-3xl font-bold text-purple-700">{{ held }}</p>
     </div>
 
     <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4 text-center">

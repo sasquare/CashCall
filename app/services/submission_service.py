@@ -13,7 +13,12 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy.orm import Session
 
-from app.constants import MONTH_NAMES
+from app.constants import (
+    CLARIFICATION_STATUSES,
+    DEFERRED_STATUSES,
+    MONTH_NAMES,
+    REJECTED_STATUSES,
+)
 from app.models.audit_log import AuditLog
 from app.models.category_budget import CategoryBudget
 from app.models.exchange_rate import ExchangeRate
@@ -179,6 +184,8 @@ def write_item_decision_log(
     performer: User,
     db: Session,
     notes: str | None = None,
+    stage: str | None = None,
+    previous_status: str | None = None,
 ) -> None:
     db.add(AuditLog(
         submission_id=submission.id,
@@ -188,7 +195,81 @@ def write_item_decision_log(
         performed_by=performer.id,
         amount_usd=float(line_item.equivalent_usd),
         notes=notes,
+        stage=stage,
+        previous_status=previous_status,
     ))
+
+
+# ---------------------------------------------------------------------------
+# Status breakdown — aggregated counts for a submission's line items
+# ---------------------------------------------------------------------------
+
+def line_item_status_breakdown(line_items) -> dict[str, int]:
+    """
+    Buckets a set of line items into 5 human-facing categories: Paid,
+    In Progress (pending at any stage), Deferred, Needs Clarification,
+    Rejected. Used everywhere a "Mixed" submission needs to show what that
+    actually means instead of a single opaque status word.
+    """
+    buckets = {"paid": 0, "in_progress": 0, "deferred": 0, "needs_clarification": 0, "rejected": 0}
+    for li in line_items:
+        if li.status == "paid":
+            buckets["paid"] += 1
+        elif li.status in REJECTED_STATUSES:
+            buckets["rejected"] += 1
+        elif li.status in DEFERRED_STATUSES:
+            buckets["deferred"] += 1
+        elif li.status in CLARIFICATION_STATUSES:
+            buckets["needs_clarification"] += 1
+        else:
+            buckets["in_progress"] += 1
+    return buckets
+
+
+# ---------------------------------------------------------------------------
+# CFO deferral resolution — convert a held "deferred_approved" reservation
+# into either a confirmed "approved_mtd" reservation (item later approved)
+# or release it entirely (item later rejected), in the month it was
+# deferred to. Only applies to items that actually went through CFO defer;
+# ignored for everything else.
+# ---------------------------------------------------------------------------
+
+def item_status_reason(li) -> str | None:
+    """The comment/reason attached to whichever stage last acted on this item."""
+    if li.status in ("hod_rejected", "hod_deferred", "hod_clarification_requested"):
+        return li.hod_comment
+    if li.status in ("qc_query_raised", "finance_rejected", "finance_deferred"):
+        return li.finance_qc_comment
+    if li.status in ("cfo_rejected", "deferred_by_cfo", "cfo_clarification_requested"):
+        return li.cfo_reason
+    if li.status in ("ceo_rejected", "ceo_deferred", "ceo_clarification_requested"):
+        return li.ceo_reason
+    return None
+
+
+def flagged_items_for_notification(line_items) -> list[dict]:
+    """Every item currently rejected, deferred, or awaiting clarification, with its reason."""
+    flagged = []
+    for li in line_items:
+        if li.status in REJECTED_STATUSES or li.status in DEFERRED_STATUSES or li.status in CLARIFICATION_STATUSES:
+            flagged.append({
+                "vendor": li.vendor_name,
+                "status": li.status,
+                "reason": item_status_reason(li) or "No reason recorded.",
+            })
+    return flagged
+
+
+def resolve_cfo_deferred_budget(submission, line_items, db: Session, approved: bool) -> None:
+    for li in line_items:
+        if not li.cfo_deferred or not li.cfo_defer_to_month:
+            continue
+        amount = Decimal(str(li.equivalent_usd))
+        adjust_category_budget(
+            li.category, submission.cost_type, li.cfo_defer_to_month, submission.year, db,
+            delta_deferred=-amount,
+            delta_approved=amount if approved else Decimal("0"),
+        )
 
 
 def defer_budget_for_submission(submission, deferred_line_items, target_month: int, db: Session) -> None:

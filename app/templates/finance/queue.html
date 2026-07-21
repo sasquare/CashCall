@@ -50,7 +50,7 @@
           <td class="px-4 py-3 text-gray-600">{{ sub.month_name }}</td>
           <td class="px-4 py-3">
             {% if query_counts.get(sub.id, 0) > 0 %}
-            <span class="badge badge-amber text-xs">{{ query_counts[sub.id] }} Query Raised</span>
+            <span class="badge badge-purple text-xs">{{ query_counts[sub.id] }} Held (Query/Deferred)</span>
             {% else %}
             <span class="badge badge-gray text-xs">Pending QC</span>
             {% endif %}

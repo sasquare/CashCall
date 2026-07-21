@@ -2,14 +2,6 @@
 {% block title %}{{ submission.submission_id }}{% endblock %}
 
 {% block content %}
-{% set badge_colours = {
-  'pending_hod': 'amber', 'hod_rejected': 'red',
-  'pending_finance_qc': 'amber', 'qc_query_raised': 'purple',
-  'finance_rejected': 'red',
-  'pending_cfo': 'amber', 'cfo_rejected': 'red', 'deferred_by_cfo': 'gray',
-  'pending_ceo': 'amber', 'ceo_rejected': 'red',
-  'pending_treasury_payment': 'amber', 'paid': 'green', 'mixed': 'blue'
-} %}
 {% set colour = badge_colours.get(submission.status, 'gray') %}
 
 <div class="max-w-5xl mx-auto">
@@ -27,6 +19,15 @@
       <p class="text-sm text-gray-500">
         Submitted {{ submission.created_at.strftime('%d %b %Y at %H:%M') if submission.created_at else '—' }}
       </p>
+      {% if submission.status == 'mixed' %}
+      <div class="flex flex-wrap gap-2 mt-2">
+        {% if status_breakdown.paid %}<span class="badge badge-green text-xs">{{ status_breakdown.paid }} Paid</span>{% endif %}
+        {% if status_breakdown.in_progress %}<span class="badge badge-amber text-xs">{{ status_breakdown.in_progress }} In Progress</span>{% endif %}
+        {% if status_breakdown.deferred %}<span class="badge badge-purple text-xs">{{ status_breakdown.deferred }} Deferred</span>{% endif %}
+        {% if status_breakdown.needs_clarification %}<span class="badge badge-blue text-xs">{{ status_breakdown.needs_clarification }} Needs Clarification</span>{% endif %}
+        {% if status_breakdown.rejected %}<span class="badge badge-red text-xs">{{ status_breakdown.rejected }} Rejected</span>{% endif %}
+      </div>
+      {% endif %}
     </div>
     <a href="/submissions/mine"
        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -110,10 +111,10 @@
           {% set total_usd = namespace(value=0) %}
           {% for item in submission.line_items %}
           {% set total_usd.value = total_usd.value + item.equivalent_usd %}
-          {% set item_reason = item.hod_comment if item.status == 'hod_rejected'
-              else item.finance_qc_comment if item.status in ('finance_rejected', 'qc_query_raised')
-              else item.cfo_reason if item.status in ('cfo_rejected', 'deferred_by_cfo')
-              else item.ceo_reason if item.status == 'ceo_rejected'
+          {% set item_reason = item.hod_comment if item.status in ('hod_rejected', 'hod_deferred', 'hod_clarification_requested')
+              else item.finance_qc_comment if item.status in ('finance_rejected', 'qc_query_raised', 'finance_deferred')
+              else item.cfo_reason if item.status in ('cfo_rejected', 'deferred_by_cfo', 'cfo_clarification_requested')
+              else item.ceo_reason if item.status in ('ceo_rejected', 'ceo_deferred', 'ceo_clarification_requested')
               else item.treasury_comment if item.status == 'paid'
               else None %}
           <tr class="hover:bg-gray-50 transition-colors">

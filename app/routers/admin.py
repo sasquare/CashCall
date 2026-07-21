@@ -35,7 +35,9 @@ from app.constants import (
     COST_TYPES,
     CURRENCIES,
     DEPARTMENT_GROUPS,
+    IN_PROGRESS_STATUSES,
     MONTH_NAMES,
+    REJECTED_STATUSES,
     USER_ROLES,
 )
 from app.database import get_db
@@ -493,6 +495,9 @@ async def reports(
         for li in sub.line_items:
             status_counts[li.status] = status_counts.get(li.status, 0) + 1
 
+    pipeline_count = sum(count for status, count in status_counts.items() if status in IN_PROGRESS_STATUSES)
+    rejected_count = sum(count for status, count in status_counts.items() if status in REJECTED_STATUSES)
+
     # By department — total USD requested, status
     dept_totals: dict[str, dict] = {}
     for sub in period_subs:
@@ -503,11 +508,7 @@ async def reports(
         active_items = [li for li in sub.line_items if not li.cfo_deferred]
         dept_totals[d]["total_usd"] += float(sum(li.equivalent_usd for li in active_items))
         dept_totals[d]["paid"] += float(sum(li.equivalent_usd for li in active_items if li.status == "paid"))
-        dept_totals[d]["pending"] += sum(
-            1 for li in active_items
-            if li.status in ("pending_hod", "pending_finance_qc", "qc_query_raised",
-                              "pending_cfo", "pending_ceo", "pending_treasury_payment")
-        )
+        dept_totals[d]["pending"] += sum(1 for li in active_items if li.status in IN_PROGRESS_STATUSES)
         if sub.request_type == "urgent":
             dept_totals[d]["urgent"] += 1
 
@@ -528,6 +529,8 @@ async def reports(
         years=list(range(today.year - 1, today.year + 2)),
         total_subs=len(period_subs),
         status_counts=status_counts,
+        pipeline_count=pipeline_count,
+        rejected_count=rejected_count,
         dept_totals=dict(sorted(dept_totals.items())),
         category_budgets=category_budgets,
     ))

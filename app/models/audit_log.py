@@ -17,6 +17,15 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     outcome: Mapped[str] = mapped_column(String(100), nullable=False)
 
+    # Approval level this entry happened at (hod | finance_qc | cfo | ceo |
+    # treasury | system), and the item's status immediately before this
+    # decision — together with `outcome` (the new status) this gives a
+    # complete before/after trail per item without needing to replay history.
+    # Nullable: entries predating this column, and whole-submission events
+    # that aren't tied to one approval stage, leave both unset.
+    stage: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
+    previous_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
     performed_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     performed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

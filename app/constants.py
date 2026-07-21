@@ -314,14 +314,20 @@ USER_ROLES: list[str] = [
 SUBMISSION_STATUSES: list[str] = [
     "pending_hod",
     "hod_rejected",
+    "hod_deferred",
+    "hod_clarification_requested",
     "pending_finance_qc",
     "qc_query_raised",
     "finance_rejected",
+    "finance_deferred",
     "pending_cfo",
     "cfo_rejected",
     "deferred_by_cfo",
+    "cfo_clarification_requested",
     "pending_ceo",
     "ceo_rejected",
+    "ceo_deferred",
+    "ceo_clarification_requested",
     "pending_treasury_payment",
     "paid",
 ]
@@ -331,6 +337,68 @@ SUBMISSION_STATUSES: list[str] = [
 # Submission-only rollup value (see submission_service.recompute_submission_status)
 # and is never set on a LineItem.
 LINE_ITEM_STATUSES: list[str] = SUBMISSION_STATUSES
+
+# Every status where a line item is permanently stopped — it will never
+# advance to another stage. Used to compute "rejected" totals in reports.
+REJECTED_STATUSES: list[str] = [
+    "hod_rejected",
+    "finance_rejected",
+    "cfo_rejected",
+    "ceo_rejected",
+]
+
+# Every status where a line item is paused, held at its current stage by the
+# reviewing approver (deferred for later, or awaiting clarification), but has
+# not been rejected and has not advanced. It stays actionable in that same
+# approver's queue until they resolve it with a further Approve/Reject.
+DEFERRED_STATUSES: list[str] = [
+    "hod_deferred",
+    "finance_deferred",
+    "deferred_by_cfo",
+    "ceo_deferred",
+]
+
+CLARIFICATION_STATUSES: list[str] = [
+    "hod_clarification_requested",
+    "qc_query_raised",
+    "cfo_clarification_requested",
+    "ceo_clarification_requested",
+]
+
+# Statuses where the item is still moving through the pipeline (not paid,
+# not rejected) — i.e. pending outright, deferred, or awaiting clarification.
+IN_PROGRESS_STATUSES: list[str] = (
+    [s for s in SUBMISSION_STATUSES if s.startswith("pending_")]
+    + DEFERRED_STATUSES
+    + CLARIFICATION_STATUSES
+)
+
+# Preset reason categories offered in the approver UI for actions that
+# require a reason (Reject / Defer / Request Clarification). The approver
+# can always pick "Other…" and type a custom reason instead — the backend
+# accepts free text regardless, these are just UI convenience shortcuts.
+REASON_PRESETS: dict[str, list[str]] = {
+    "reject": [
+        "Missing vendor quotation",
+        "Incorrect GL account",
+        "Budget exceeded",
+        "Duplicate invoice",
+        "Invoice amount mismatch",
+        "Unauthorised vendor",
+    ],
+    "defer": [
+        "Awaiting revised invoice",
+        "Cash flow constraint this period",
+        "Pending budget re-allocation",
+        "Awaiting management decision",
+    ],
+    "clarify": [
+        "Missing supporting document",
+        "Awaiting vendor confirmation",
+        "Requires additional justification",
+        "PO / invoice mismatch — please confirm",
+    ],
+}
 
 TREASURY_PAYMENT_STATUSES: list[str] = [
     "paid",
@@ -371,18 +439,26 @@ URGENCY_CATEGORIES: list[str] = [
     "Other",
 ]
 
-# Status → badge colour mapping (used in templates)
+# Status → badge colour mapping (used in templates). Colour convention:
+# amber = awaiting a decision, red = rejected, purple = deferred,
+# blue = needs clarification, green = paid, gray = fallback.
 STATUS_BADGE_COLOURS: dict[str, str] = {
     "pending_hod": "amber",
     "hod_rejected": "red",
+    "hod_deferred": "purple",
+    "hod_clarification_requested": "blue",
     "pending_finance_qc": "amber",
-    "qc_query_raised": "purple",
+    "qc_query_raised": "blue",
     "finance_rejected": "red",
+    "finance_deferred": "purple",
     "pending_cfo": "amber",
     "cfo_rejected": "red",
-    "deferred_by_cfo": "gray",
+    "deferred_by_cfo": "purple",
+    "cfo_clarification_requested": "blue",
     "pending_ceo": "amber",
     "ceo_rejected": "red",
+    "ceo_deferred": "purple",
+    "ceo_clarification_requested": "blue",
     "pending_treasury_payment": "amber",
     "paid": "green",
     "mixed": "blue",

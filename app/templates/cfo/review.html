@@ -4,7 +4,8 @@
 {% block content %}
 {% set colour = badge_colours.get(submission.status, 'gray') %}
 {% set action = request.query_params.get('action') %}
-{% set pending_items = submission.line_items | selectattr('status', 'equalto', 'pending_cfo') | list %}
+{% set actionable_statuses = ['pending_cfo', 'cfo_clarification_requested', 'deferred_by_cfo'] %}
+{% set pending_items = submission.line_items | selectattr('status', 'in', actionable_statuses) | list %}
 
 <div class="max-w-5xl mx-auto">
 
@@ -38,7 +39,12 @@
   {% elif action == 'deferred' %}
   <div class="mb-6 rounded-lg bg-purple-50 border border-purple-200 p-4 flex items-center gap-3">
     <svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-    <p class="text-sm font-medium text-purple-800">Selected item(s) deferred to a future month.</p>
+    <p class="text-sm font-medium text-purple-800">Selected item(s) deferred to a future month. They'll stay in your queue until resolved.</p>
+  </div>
+  {% elif action == 'clarify' %}
+  <div class="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4 flex items-center gap-3">
+    <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <p class="text-sm font-medium text-blue-800">Clarification requested on selected item(s).</p>
   </div>
   {% endif %}
 
@@ -87,9 +93,9 @@
           {% set total_usd = namespace(value=0) %}
           {% for item in submission.line_items %}
           {% set total_usd.value = total_usd.value + item.equivalent_usd %}
-          <tr class="{% if item.status == 'pending_cfo' %}hover:bg-amber-50{% elif item.cfo_deferred %}bg-purple-50{% endif %}">
+          <tr class="{% if item.status in actionable_statuses %}hover:bg-amber-50{% endif %} {% if item.status == 'deferred_by_cfo' %}bg-purple-50{% endif %}">
             <td class="px-4 py-3">
-              {% if item.status == 'pending_cfo' %}
+              {% if item.status in actionable_statuses %}
               <input type="checkbox" name="item_ids" value="{{ item.id }}" class="item-checkbox">
               {% endif %}
             </td>
@@ -100,8 +106,10 @@
               {% if item.is_arrear %}<div class="mt-0.5"><span class="badge badge-purple text-xs">Arrear</span></div>{% endif %}
               {% if item.status == 'cfo_rejected' and item.cfo_reason %}
               <div class="mt-1 text-xs text-red-600">Rejected: {{ item.cfo_reason }}</div>
-              {% elif item.cfo_deferred %}
+              {% elif item.status == 'deferred_by_cfo' %}
               <div class="mt-1 text-xs text-purple-600">Deferred → {{ month_names.get(item.cfo_defer_to_month, '') }}: {{ item.cfo_reason }}</div>
+              {% elif item.status == 'cfo_clarification_requested' and item.cfo_reason %}
+              <div class="mt-1 text-xs text-blue-600">Clarification needed: {{ item.cfo_reason }}</div>
               {% endif %}
             </td>
             <td class="px-4 py-3 text-right font-mono text-gray-900">{{ item.currency }} {{ '{:,.2f}'.format(item.original_amount) }}</td>
@@ -127,12 +135,29 @@
 
     {% if pending_items %}
     <div class="p-6 border-t border-gray-100 bg-gray-50 space-y-3">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Comment / Reason (required to reject or defer, optional to approve)</label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Comment / Reason (required to reject, defer, or clarify)</label>
           <textarea name="comment" id="comment" rows="2"
                     class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white resize-none"
                     placeholder="Add a comment…"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Reason preset</label>
+          <select id="reason-preset" onchange="applyReasonPreset(this)"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-600">
+            <option value="">Choose a common reason…</option>
+            <optgroup label="Reject reasons">
+              {% for r in reason_presets.reject %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+            </optgroup>
+            <optgroup label="Defer reasons">
+              {% for r in reason_presets.defer %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+            </optgroup>
+            <optgroup label="Clarification reasons">
+              {% for r in reason_presets.clarify %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+            </optgroup>
+            <option value="__other__">Other… (type below)</option>
+          </select>
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-600 mb-1">Defer to month (only used by Defer)</label>
@@ -145,20 +170,25 @@
           </select>
         </div>
       </div>
-      <div class="flex gap-3">
+      <div class="flex flex-wrap gap-3">
         <button type="submit" formaction="/cfo/submissions/{{ submission.submission_id }}/items/approve"
                 onclick="return confirmItemAction('approve')"
-                class="flex-1 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition-colors">
+                class="flex-1 min-w-[140px] rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition-colors">
           Approve Selected
         </button>
         <button type="submit" formaction="/cfo/submissions/{{ submission.submission_id }}/items/defer"
                 onclick="return confirmItemAction('defer')"
-                class="flex-1 rounded-lg bg-purple-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-800 transition-colors">
+                class="flex-1 min-w-[140px] rounded-lg bg-purple-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-800 transition-colors">
           Defer Selected
+        </button>
+        <button type="submit" formaction="/cfo/submissions/{{ submission.submission_id }}/items/clarify"
+                onclick="return confirmItemAction('clarify')"
+                class="flex-1 min-w-[140px] rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
+          Request Clarification
         </button>
         <button type="submit" formaction="/cfo/submissions/{{ submission.submission_id }}/items/reject"
                 onclick="return confirmItemAction('reject')"
-                class="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors">
+                class="flex-1 min-w-[140px] rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors">
           Reject Selected
         </button>
       </div>
@@ -190,6 +220,11 @@
 </div>
 
 <script>
+  function applyReasonPreset(select) {
+    if (!select.value || select.value === '__other__') return;
+    document.getElementById('comment').value = select.value;
+  }
+
   function confirmItemAction(action) {
     const checked = document.querySelectorAll('.item-checkbox:checked').length;
     if (checked === 0) {
@@ -197,7 +232,7 @@
       return false;
     }
     const comment = document.getElementById('comment').value.trim();
-    if ((action === 'reject' || action === 'defer') && !comment) {
+    if (action !== 'approve' && !comment) {
       alert('A reason is required for this action.');
       return false;
     }
@@ -205,8 +240,8 @@
       alert('Select a month to defer to.');
       return false;
     }
-    const label = action === 'approve' ? 'Approve' : action === 'defer' ? 'Defer' : 'Reject';
-    return confirm(label + ' ' + checked + ' selected item(s)?');
+    const labels = { approve: 'Approve', reject: 'Reject', defer: 'Defer', clarify: 'Request clarification on' };
+    return confirm(labels[action] + ' ' + checked + ' selected item(s)?');
   }
 </script>
 {% endblock %}

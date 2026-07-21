@@ -4,7 +4,8 @@
 {% block content %}
 {% set colour = badge_colours.get(submission.status, 'gray') %}
 {% set action = request.query_params.get('action') %}
-{% set pending_items = submission.line_items | selectattr('status', 'equalto', 'pending_ceo') | list %}
+{% set actionable_statuses = ['pending_ceo', 'ceo_deferred', 'ceo_clarification_requested'] %}
+{% set pending_items = submission.line_items | selectattr('status', 'in', actionable_statuses) | list %}
 
 <div class="max-w-5xl mx-auto">
 
@@ -34,6 +35,16 @@
   <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 flex items-center gap-3">
     <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     <p class="text-sm font-medium text-red-800">Selected item(s) rejected.</p>
+  </div>
+  {% elif action == 'deferred' %}
+  <div class="mb-6 rounded-lg bg-purple-50 border border-purple-200 p-4 flex items-center gap-3">
+    <svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <p class="text-sm font-medium text-purple-800">Selected item(s) deferred. They'll stay in your queue until resolved.</p>
+  </div>
+  {% elif action == 'clarify' %}
+  <div class="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4 flex items-center gap-3">
+    <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <p class="text-sm font-medium text-blue-800">Clarification requested on selected item(s).</p>
   </div>
   {% endif %}
 
@@ -82,9 +93,9 @@
           {% set total_usd = namespace(value=0) %}
           {% for item in submission.line_items %}
           {% set total_usd.value = total_usd.value + item.equivalent_usd %}
-          <tr class="{% if item.status == 'pending_ceo' %}hover:bg-amber-50{% elif item.cfo_deferred %}opacity-50 bg-gray-50{% endif %}">
+          <tr class="{% if item.status in actionable_statuses %}hover:bg-amber-50{% endif %}">
             <td class="px-4 py-3">
-              {% if item.status == 'pending_ceo' %}
+              {% if item.status in actionable_statuses %}
               <input type="checkbox" name="item_ids" value="{{ item.id }}" class="item-checkbox">
               {% endif %}
             </td>
@@ -93,8 +104,10 @@
             <td class="px-4 py-3 text-gray-700 max-w-[200px]">
               {{ item.description }}
               {% if item.is_arrear %}<div class="mt-0.5"><span class="badge badge-purple text-xs">Arrear</span></div>{% endif %}
-              {% if item.status == 'ceo_rejected' and item.ceo_reason %}
-              <div class="mt-1 text-xs text-red-600">Rejected: {{ item.ceo_reason }}</div>
+              {% if item.ceo_reason and item.status in ('ceo_rejected', 'ceo_deferred', 'ceo_clarification_requested') %}
+              <div class="mt-1 text-xs {% if item.status == 'ceo_rejected' %}text-red-600{% elif item.status == 'ceo_deferred' %}text-purple-600{% else %}text-blue-600{% endif %}">
+                {{ 'Rejected' if item.status == 'ceo_rejected' else ('Deferred' if item.status == 'ceo_deferred' else 'Clarification needed') }}: {{ item.ceo_reason }}
+              </div>
               {% endif %}
             </td>
             <td class="px-4 py-3 text-right font-mono text-gray-900">{{ item.currency }} {{ '{:,.2f}'.format(item.original_amount) }}</td>
@@ -120,19 +133,50 @@
 
     {% if pending_items %}
     <div class="p-6 border-t border-gray-100 bg-gray-50">
-      <label class="block text-xs font-medium text-gray-600 mb-1">Comment (required to reject, optional to approve)</label>
-      <textarea name="comment" id="comment" rows="2"
-                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white resize-none mb-3"
-                placeholder="Add a comment…"></textarea>
-      <div class="flex gap-3">
+      <div class="flex flex-wrap items-end gap-3 mb-3">
+        <div class="flex-1 min-w-[220px]">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Comment (required to reject/defer/clarify, optional to approve)</label>
+          <textarea name="comment" id="comment" rows="2"
+                    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white resize-none"
+                    placeholder="Add a comment…"></textarea>
+        </div>
+        <div class="min-w-[220px]">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Reason preset</label>
+          <select id="reason-preset" onchange="applyReasonPreset(this)"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-600">
+            <option value="">Choose a common reason…</option>
+            <optgroup label="Reject reasons">
+              {% for r in reason_presets.reject %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+            </optgroup>
+            <optgroup label="Defer reasons">
+              {% for r in reason_presets.defer %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+            </optgroup>
+            <optgroup label="Clarification reasons">
+              {% for r in reason_presets.clarify %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+            </optgroup>
+            <option value="__other__">Other… (type below)</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-3">
         <button type="submit" formaction="/ceo/submissions/{{ submission.submission_id }}/items/approve"
                 onclick="return confirmItemAction('approve')"
-                class="flex-1 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition-colors">
+                class="flex-1 min-w-[140px] rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition-colors">
           Authorise Selected
+        </button>
+        <button type="submit" formaction="/ceo/submissions/{{ submission.submission_id }}/items/defer"
+                onclick="return confirmItemAction('defer')"
+                class="flex-1 min-w-[140px] rounded-lg bg-purple-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-800 transition-colors">
+          Defer Selected
+        </button>
+        <button type="submit" formaction="/ceo/submissions/{{ submission.submission_id }}/items/clarify"
+                onclick="return confirmItemAction('clarify')"
+                class="flex-1 min-w-[140px] rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
+          Request Clarification
         </button>
         <button type="submit" formaction="/ceo/submissions/{{ submission.submission_id }}/items/reject"
                 onclick="return confirmItemAction('reject')"
-                class="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors">
+                class="flex-1 min-w-[140px] rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors">
           Reject Selected
         </button>
       </div>
@@ -164,6 +208,11 @@
 </div>
 
 <script>
+  function applyReasonPreset(select) {
+    if (!select.value || select.value === '__other__') return;
+    document.getElementById('comment').value = select.value;
+  }
+
   function confirmItemAction(action) {
     const checked = document.querySelectorAll('.item-checkbox:checked').length;
     if (checked === 0) {
@@ -171,11 +220,12 @@
       return false;
     }
     const comment = document.getElementById('comment').value.trim();
-    if (action === 'reject' && !comment) {
-      alert('A reason is required to reject items.');
+    if (action !== 'approve' && !comment) {
+      alert('A reason is required for this action.');
       return false;
     }
-    return confirm((action === 'approve' ? 'Authorise' : 'Reject') + ' ' + checked + ' selected item(s)?');
+    const labels = { approve: 'Authorise', reject: 'Reject', defer: 'Defer', clarify: 'Request clarification on' };
+    return confirm(labels[action] + ' ' + checked + ' selected item(s)?');
   }
 </script>
 {% endblock %}

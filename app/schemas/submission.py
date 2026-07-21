@@ -92,8 +92,12 @@ class SubmissionIn(BaseModel):
     def at_least_one_item(cls, v: list) -> list:
         if not v:
             raise ValueError("At least one line item is required.")
-        if len(v) > 10:
-            raise ValueError("Maximum 10 line items per submission.")
+        # High ceiling rather than a true unlimited batch — keeps a single
+        # request/transaction bounded while comfortably covering large
+        # bulk-import batches (hundreds of items). Raised from an earlier
+        # cap of 10, which was too restrictive for real bulk uploads.
+        if len(v) > 500:
+            raise ValueError("Maximum 500 line items per submission.")
         return v
 
 

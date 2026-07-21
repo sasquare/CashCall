@@ -42,13 +42,12 @@
     </div>
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
       <p class="text-xs text-gray-500 uppercase">Items In Pipeline</p>
-      {% set pipeline = status_counts.get('pending_hod',0) + status_counts.get('pending_finance_qc',0) + status_counts.get('qc_query_raised',0) + status_counts.get('pending_cfo',0) + status_counts.get('pending_ceo',0) + status_counts.get('pending_treasury_payment',0) %}
-      <p class="text-3xl font-bold text-amber-600 mt-1">{{ pipeline }}</p>
+      <p class="text-3xl font-bold text-amber-600 mt-1">{{ pipeline_count }}</p>
+      <p class="text-xs text-gray-400 mt-1">pending, deferred, or awaiting clarification</p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
       <p class="text-xs text-gray-500 uppercase">Items Rejected</p>
-      {% set rejected = status_counts.get('hod_rejected',0) + status_counts.get('finance_rejected',0) + status_counts.get('cfo_rejected',0) + status_counts.get('ceo_rejected',0) %}
-      <p class="text-3xl font-bold text-red-500 mt-1">{{ rejected }}</p>
+      <p class="text-3xl font-bold text-red-500 mt-1">{{ rejected_count }}</p>
     </div>
   </div>
 

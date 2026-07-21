@@ -49,6 +49,7 @@
           <td class="px-4 py-3">
             {% if sub.budget_over_limit_flag %}<span class="badge badge-red text-xs">Over Budget</span>{% endif %}
             {% if sub.line_items | selectattr('is_arrear') | list %}<span class="badge badge-purple text-xs ml-1">Arrears</span>{% endif %}
+            {% if held_counts.get(sub.id, 0) > 0 %}<span class="badge badge-purple text-xs ml-1">{{ held_counts[sub.id] }} Held</span>{% endif %}
           </td>
           <td class="px-4 py-3 text-right">
             <a href="/cfo/submissions/{{ sub.submission_id }}"

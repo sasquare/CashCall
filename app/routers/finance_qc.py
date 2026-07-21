@@ -1,11 +1,16 @@
 """
 Finance QC routes — per line item:
-  GET  /finance/queue                        — items pending QC
+  GET  /finance/queue                        — items awaiting a Finance QC decision
   GET  /finance/tracker                      — submissions that reached Finance QC or beyond
   GET  /finance/submissions/{id}             — review a submission's items
   POST /finance/submissions/{id}/items/approve — clear selected items for CFO
-  POST /finance/submissions/{id}/items/query   — raise a query on selected items
+  POST /finance/submissions/{id}/items/query   — request clarification (item stays with Finance)
   POST /finance/submissions/{id}/items/reject  — reject selected items (reason required)
+  POST /finance/submissions/{id}/items/defer   — defer selected items (item stays with Finance)
+
+Deferred and clarification-requested ("query") items stay actionable in
+Finance's own queue/review screen until resolved with a further decision —
+they never advance and never return to the requester on their own.
 """
 
 from __future__ import annotations
@@ -16,13 +21,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.constants import STATUS_BADGE_COLOURS
+from app.constants import REASON_PRESETS, STATUS_BADGE_COLOURS
 from app.database import get_db
 from app.dependencies import require_role
 from app.models.line_item import LineItem
 from app.models.submission import Submission
 from app.models.user import User
+from app.services.email_service import notify_batch_outcome
 from app.services.submission_service import (
+    flagged_items_for_notification,
+    line_item_status_breakdown,
     release_budget_for_items,
     recompute_submission_status,
     write_item_decision_log,
@@ -35,16 +43,20 @@ FINANCE_VISIBLE_STATUSES: list[str] = [
     "pending_finance_qc",
     "qc_query_raised",
     "finance_rejected",
+    "finance_deferred",
     "pending_cfo",
     "cfo_rejected",
     "deferred_by_cfo",
+    "cfo_clarification_requested",
     "pending_ceo",
     "ceo_rejected",
+    "ceo_deferred",
+    "ceo_clarification_requested",
     "pending_treasury_payment",
     "paid",
 ]
 
-ACTIONABLE = ("pending_finance_qc", "qc_query_raised")
+ACTIONABLE = ("pending_finance_qc", "qc_query_raised", "finance_deferred")
 
 
 def _templates(request: Request):
@@ -101,7 +113,7 @@ async def finance_queue(
         for sub in pending_subs
     }
     query_counts = {
-        sub.id: sum(1 for li in sub.line_items if li.status == "qc_query_raised")
+        sub.id: sum(1 for li in sub.line_items if li.status in ("qc_query_raised", "finance_deferred"))
         for sub in pending_subs
     }
 
@@ -185,8 +197,20 @@ async def finance_review(
     tmpl = _templates(request)
     return tmpl.TemplateResponse(
         "finance/review.html",
-        _ctx(request, user=current_user, submission=sub, badge_colours=STATUS_BADGE_COLOURS),
+        _ctx(
+            request, user=current_user, submission=sub, badge_colours=STATUS_BADGE_COLOURS,
+            reason_presets=REASON_PRESETS,
+        ),
     )
+
+
+def _notify_originator(sub: Submission, db: Session, stage_label: str) -> None:
+    originator = db.query(User).filter(User.id == sub.created_by).first()
+    if not originator:
+        return
+    breakdown = line_item_status_breakdown(sub.line_items)
+    flagged = flagged_items_for_notification(sub.line_items)
+    notify_batch_outcome(originator.email, sub.submission_id, stage_label, breakdown, flagged)
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +233,7 @@ async def finance_approve_items(
 
     now = datetime.now(timezone.utc)
     for li in items:
+        previous_status = li.status
         li.status = "pending_cfo"
         li.finance_qc_status = "approved"
         li.finance_qc_comment = comment or None
@@ -218,10 +243,12 @@ async def finance_approve_items(
             sub, li, "finance_qc_approved", "pending_cfo", current_user, db,
             notes=f"Finance QC cleared by {current_user.display_name}."
                   + (f" Comment: {comment}" if comment else ""),
+            stage="finance_qc", previous_status=previous_status,
         )
 
     recompute_submission_status(sub)
     db.commit()
+    _notify_originator(sub, db, "Finance")
     return RedirectResponse(url=f"/finance/submissions/{submission_id}?action=approved", status_code=303)
 
 
@@ -248,6 +275,7 @@ async def finance_query_items(
 
     now = datetime.now(timezone.utc)
     for li in items:
+        previous_status = li.status
         li.status = "qc_query_raised"
         li.finance_qc_status = "query_raised"
         li.finance_qc_comment = comment
@@ -255,12 +283,55 @@ async def finance_query_items(
         li.finance_qc_by = current_user.id
         write_item_decision_log(
             sub, li, "finance_qc_query", "qc_query_raised", current_user, db,
-            notes=f"Query raised by {current_user.display_name}: {comment}",
+            notes=f"Clarification requested by {current_user.display_name}: {comment}",
+            stage="finance_qc", previous_status=previous_status,
         )
 
     recompute_submission_status(sub)
     db.commit()
+    _notify_originator(sub, db, "Finance")
     return RedirectResponse(url=f"/finance/submissions/{submission_id}?action=query", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Defer selected items — stays with Finance until resolved
+# ---------------------------------------------------------------------------
+
+@router.post("/submissions/{submission_id}/items/defer", response_class=HTMLResponse)
+async def finance_defer_items(
+    request: Request,
+    submission_id: str,
+    current_user: User = Depends(require_role("finance_reviewer")),
+    db: Session = Depends(get_db),
+):
+    form = await request.form()
+    comment = (form.get("comment") or "").strip()
+    if not comment:
+        raise HTTPException(status_code=422, detail="A reason is required when deferring items.")
+
+    sub = _get_sub(submission_id, db)
+    items = _get_selected_items(sub, _parse_item_ids(form))
+    if not items:
+        raise HTTPException(status_code=422, detail="Select at least one item to defer.")
+
+    now = datetime.now(timezone.utc)
+    for li in items:
+        previous_status = li.status
+        li.status = "finance_deferred"
+        li.finance_qc_status = "deferred"
+        li.finance_qc_comment = comment
+        li.finance_qc_at = now
+        li.finance_qc_by = current_user.id
+        write_item_decision_log(
+            sub, li, "finance_qc_deferred", "finance_deferred", current_user, db,
+            notes=f"Deferred by {current_user.display_name}. Reason: {comment}",
+            stage="finance_qc", previous_status=previous_status,
+        )
+
+    recompute_submission_status(sub)
+    db.commit()
+    _notify_originator(sub, db, "Finance")
+    return RedirectResponse(url=f"/finance/submissions/{submission_id}?action=deferred", status_code=303)
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +357,7 @@ async def finance_reject_items(
 
     now = datetime.now(timezone.utc)
     for li in items:
+        previous_status = li.status
         li.status = "finance_rejected"
         li.finance_qc_status = "rejected"
         li.finance_qc_comment = comment
@@ -294,9 +366,11 @@ async def finance_reject_items(
         write_item_decision_log(
             sub, li, "finance_qc_rejected", "finance_rejected", current_user, db,
             notes=f"Rejected by {current_user.display_name}: {comment}",
+            stage="finance_qc", previous_status=previous_status,
         )
 
     release_budget_for_items(sub, items, db)
     recompute_submission_status(sub)
     db.commit()
+    _notify_originator(sub, db, "Finance")
     return RedirectResponse(url=f"/finance/submissions/{submission_id}?action=rejected", status_code=303)

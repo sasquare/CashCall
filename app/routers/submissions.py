@@ -26,6 +26,7 @@ from app.constants import (
     CURRENCIES,
     DEPARTMENT_GROUPS,
     PAYMENT_FREQUENCIES,
+    STATUS_BADGE_COLOURS,
     SUBMISSION_STATUSES,
     URGENCY_CATEGORIES,
 )
@@ -34,7 +35,7 @@ from app.dependencies import get_current_user, require_role
 from app.models.submission import Submission
 from app.models.user import User
 from app.schemas.submission import LineItemIn, SubmissionIn, UrgentSubmissionIn
-from app.services.submission_service import create_submission
+from app.services.submission_service import create_submission, line_item_status_breakdown
 from app.services.batch_import_service import (
     BULK_IMPORT_COLUMNS,
     BULK_IMPORT_EXAMPLE,
@@ -613,7 +614,7 @@ async def my_submissions(
     tmpl = _templates(request)
     return tmpl.TemplateResponse(
         "submissions/mine.html",
-        _get_template_ctx(request, user=current_user, submissions=submissions),
+        _get_template_ctx(request, user=current_user, submissions=submissions, badge_colours=STATUS_BADGE_COLOURS),
     )
 
 
@@ -667,6 +668,10 @@ async def submission_detail(
     tmpl = _templates(request)
     return tmpl.TemplateResponse(
         "submissions/detail.html",
-        _get_template_ctx(request, user=current_user, submission=submission),
+        _get_template_ctx(
+            request, user=current_user, submission=submission,
+            badge_colours=STATUS_BADGE_COLOURS,
+            status_breakdown=line_item_status_breakdown(submission.line_items),
+        ),
     )
 

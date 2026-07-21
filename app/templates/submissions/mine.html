@@ -49,14 +49,6 @@
       </thead>
       <tbody class="divide-y divide-gray-100">
         {% for sub in submissions %}
-        {% set badge_colours = {
-          'pending_hod': 'amber', 'hod_rejected': 'red',
-          'pending_finance_qc': 'amber', 'qc_query_raised': 'purple',
-          'finance_rejected': 'red',
-          'pending_cfo': 'amber', 'cfo_rejected': 'red', 'deferred_by_cfo': 'gray',
-          'pending_ceo': 'amber', 'ceo_rejected': 'red',
-          'pending_treasury_payment': 'amber', 'paid': 'green', 'mixed': 'blue'
-        } %}
         {% set colour = badge_colours.get(sub.status, 'gray') %}
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-4 py-3 font-mono font-medium text-gray-900">
