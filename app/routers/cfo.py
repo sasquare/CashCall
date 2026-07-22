@@ -324,7 +324,7 @@ async def cfo_defer_items(
     db: Session = Depends(get_db),
 ):
     form = await request.form()
-    reason = (form.get("reason") or "").strip()
+    reason = (form.get("comment") or "").strip()
     if not reason:
         raise HTTPException(status_code=422, detail="A reason is required for deferral.")
     try:
