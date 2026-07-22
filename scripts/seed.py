@@ -125,6 +125,10 @@ OPEX_BUDGET_2026: dict[str, list[float]] = {
 
 
 def _make_dept_users(department: str, slug: str) -> list[dict]:
+    # Two originators per department — the model has no per-department cap on
+    # any role, this is purely a matter of creating two accounts. Having a
+    # backup originator means submissions can still be raised if the primary
+    # is on leave.
     return [
         {
             "email": f"hod.{slug}@dangote.com",
@@ -135,7 +139,14 @@ def _make_dept_users(department: str, slug: str) -> list[dict]:
         },
         {
             "email": f"originator.{slug}@dangote.com",
-            "display_name": f"Originator – {department}",
+            "display_name": f"Originator 1 – {department}",
+            "role": "originator",
+            "department": department,
+            "password": "Orig@1234",
+        },
+        {
+            "email": f"originator2.{slug}@dangote.com",
+            "display_name": f"Originator 2 – {department}",
             "role": "originator",
             "department": department,
             "password": "Orig@1234",

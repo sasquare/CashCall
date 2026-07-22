@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     AZURE_TENANT_ID: str = ""
     AZURE_REDIRECT_URI: str = "http://localhost:8000/auth/callback"
 
+    # Comma-separated list of email domains allowed to hold an account (e.g.
+    # "dangote.com" or "dangote.com,dorc.dangote.com"). Enforced both when an
+    # IT Admin creates/edits a user and, as a second layer, on every Azure AD
+    # sign-in — so a misconfigured Azure tenant (e.g. a guest account from an
+    # external domain) still can't get in even if it somehow authenticates.
+    ALLOWED_EMAIL_DOMAINS: str = "dangote.com"
+
     DEV_BYPASS_ENABLED: bool = True
 
     SMTP_HOST: str = ""

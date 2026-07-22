@@ -15,6 +15,21 @@ from app.models.user import User
 
 
 # ---------------------------------------------------------------------------
+# Organization email domain check
+# ---------------------------------------------------------------------------
+
+def is_allowed_email_domain(email: str) -> bool:
+    """True if the email's domain is one of ALLOWED_EMAIL_DOMAINS."""
+    allowed = {d.strip().lower() for d in settings.ALLOWED_EMAIL_DOMAINS.split(",") if d.strip()}
+    if not allowed:
+        return True  # no restriction configured
+    email = (email or "").strip().lower()
+    if "@" not in email:
+        return False
+    return email.rsplit("@", 1)[1] in allowed
+
+
+# ---------------------------------------------------------------------------
 # Password (dev bypass only)
 # ---------------------------------------------------------------------------
 
@@ -121,6 +136,12 @@ def handle_auth_callback(request: Request, db: Session) -> User | None:
     display_name = claims.get("name") or email
 
     if not email:
+        return None
+
+    # Defense in depth: reject even a successfully-authenticated Azure AD
+    # identity (e.g. a guest account from an external domain) if its email
+    # isn't on an allowed organization domain.
+    if not is_allowed_email_domain(email):
         return None
 
     user = db.query(User).filter(User.email == email).first()

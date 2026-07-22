@@ -40,6 +40,7 @@
                  value="{{ form_data.get('email', editing.email if editing else '') }}"
                  required
                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+          <p class="text-xs text-gray-400 mt-1">Must be on an approved organization domain ({{ allowed_email_domains }}).</p>
         </div>
 
         <div>

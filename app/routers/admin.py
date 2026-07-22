@@ -40,6 +40,7 @@ from app.constants import (
     REJECTED_STATUSES,
     USER_ROLES,
 )
+from app.config import settings
 from app.database import get_db
 from app.dependencies import require_role
 from app.models.audit_log import AuditLog
@@ -48,6 +49,7 @@ from app.models.exchange_rate import ExchangeRate
 from app.models.submission import Submission
 from app.models.system_audit_log import SystemAuditLog
 from app.models.user import User
+from app.services.auth_service import is_allowed_email_domain
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -124,6 +126,7 @@ async def new_user_form(
     return tmpl.TemplateResponse("admin/user_form.html", _ctx(
         request, user=current_user, editing=None,
         roles=USER_ROLES, department_groups=DEPARTMENT_GROUPS,
+        allowed_email_domains=settings.ALLOWED_EMAIL_DOMAINS,
         errors=None, form_data={},
     ))
 
@@ -141,6 +144,7 @@ async def create_user(
         return tmpl.TemplateResponse("admin/user_form.html", _ctx(
             request, user=current_user, editing=None,
             roles=USER_ROLES, department_groups=DEPARTMENT_GROUPS,
+        allowed_email_domains=settings.ALLOWED_EMAIL_DOMAINS,
             errors=errors, form_data=form,
         ), status_code=422)
 
@@ -171,6 +175,7 @@ async def edit_user_form(
     return tmpl.TemplateResponse("admin/user_form.html", _ctx(
         request, user=current_user, editing=target,
         roles=USER_ROLES, department_groups=DEPARTMENT_GROUPS,
+        allowed_email_domains=settings.ALLOWED_EMAIL_DOMAINS,
         errors=None, form_data={},
     ))
 
@@ -192,6 +197,7 @@ async def update_user(
         return tmpl.TemplateResponse("admin/user_form.html", _ctx(
             request, user=current_user, editing=target,
             roles=USER_ROLES, department_groups=DEPARTMENT_GROUPS,
+        allowed_email_domains=settings.ALLOWED_EMAIL_DOMAINS,
             errors=errors, form_data=form,
         ), status_code=422)
 
@@ -228,6 +234,9 @@ def _validate_user_form(form: dict, db: Session, editing_id: int | None) -> list
     email = form.get("email", "").strip().lower()
     if not email:
         errors.append("Email is required.")
+    elif not is_allowed_email_domain(email):
+        allowed = settings.ALLOWED_EMAIL_DOMAINS
+        errors.append(f"Email must be on an approved organization domain ({allowed}).")
     else:
         existing = db.query(User).filter(User.email == email).first()
         if existing and existing.id != editing_id:
